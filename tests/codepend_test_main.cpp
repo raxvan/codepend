@@ -1,7 +1,28 @@
 
 #include <codepend.h>
 
+struct task_pipe
+{
+public:
+	std::vector<cdp::coroutine> free_tasks;
+public:
+	void push_back(cdp::coroutine&& co)
+	{
+		free_tasks.push_back(std::move(co));
+	};
 
+	bool empty() const
+	{
+		return free_tasks.size() == 0;
+	}
+
+	cdp::coroutine pop_back()
+	{
+		auto co = std::move(free_tasks.back());
+		free_tasks.pop_back();
+		return co;
+	}
+};
 
 cdp::coroutine hello_world()
 {
@@ -9,10 +30,22 @@ cdp::coroutine hello_world()
 	co_return;
 }
 
-cdp::coroutine satisfy_dependncy(cdp::dependency_machiene& dm, cdp::dependency* dep)
+cdp::coroutine satisfy_dependncy(cdp::dependency_machine& dm, task_pipe& pipe, cdp::dependency* dep)
 {
-	std::cout << "dependency " << dep->id << 
-	dm.satisfy(dep);
+	std::cout << "dependency resolved: " << dep->id << std::endl;
+
+	dm.resolve(pipe, *dep, uint64_t(1));
+	co_return;
+}
+
+cdp::coroutine wait_on_dependency(cdp::dependency* dep)
+{
+	std::cout << "waiting for: " << dep->id << std::endl;
+
+	co_await *dep;
+
+	std::cout << "waiting completed: " << dep->id << std::endl;
+	
 	co_return;
 }
 
@@ -20,21 +53,18 @@ cdp::coroutine satisfy_dependncy(cdp::dependency_machiene& dm, cdp::dependency* 
 
 void test_main()
 {
-	cdp::dependency_machine mac;
+	cdp::dependency_machine dm;
+	task_pipe pipe;
 	
-	std::vector<cdp::coroutine> free_tasks;
+	cdp::dependency prop;
+	dm.add_dependency(&prop);
 
-	auto push_task = [&](cdp::coroutine&& co){
-		free_tasks.push_back(std::move(co));
-	};
+	pipe.push_back(satisfy_dependncy(dm, pipe, &prop));
+	pipe.push_back(wait_on_dependency(&prop));
 
-	
-	push_task(hello_world());
-
-	while(free_tasks.size())
+	while(pipe.empty() == false)
 	{
-		auto co = std::move(free_tasks.back());
-		free_tasks.pop_back();
+		auto co = pipe.pop_back();
 
 		co.handle();
 		
@@ -43,8 +73,7 @@ void test_main()
 
 		auto* dependency = co.handle.promise().waiting_for;
 		TEST_ASSERT(dependency != nullptr);
-
-		mac.push_task(*dependency, std::move(co));
+		dm.push_task(*dependency, std::move(co));
 	}
 
 }
