@@ -29,7 +29,7 @@ cdp::coroutine hello_world()
 	std::cout << "hello world" << std::endl;
 	co_return;
 }
-
+/*
 cdp::coroutine satisfy_dependncy(cdp::dependency_machine& dm, task_pipe& pipe, cdp::dependency* dep)
 {
 	std::cout << "dependency resolved: " << dep->id << std::endl;
@@ -48,19 +48,18 @@ cdp::coroutine wait_on_dependency(cdp::dependency* dep)
 	
 	co_return;
 }
-
+*/
 
 
 void test_main()
 {
-	cdp::dependency_machine dm;
+	
 	task_pipe pipe;
 	
 	cdp::dependency prop;
-	dm.add_dependency(&prop);
-
-	pipe.push_back(satisfy_dependncy(dm, pipe, &prop));
-	pipe.push_back(wait_on_dependency(&prop));
+	
+	//pipe.push_back(satisfy_dependncy(dm, pipe, &prop));
+	//pipe.push_back(wait_on_dependency(&prop));
 
 	while(pipe.empty() == false)
 	{
@@ -73,7 +72,7 @@ void test_main()
 
 		auto* dependency = co.handle.promise().waiting_for;
 		TEST_ASSERT(dependency != nullptr);
-		dm.push_task(*dependency, std::move(co));
+		//dm.push_task(*dependency, std::move(co));
 	}
 
 }

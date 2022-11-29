@@ -6,7 +6,7 @@
 
 namespace cdp
 {
-	
+
 	struct dependency;
 
 	struct coroutine
@@ -15,11 +15,26 @@ namespace cdp
 		using promise_type = coroutine_context;
 		using handle_type = std::coroutine_handle<coroutine_context>;
 
+		struct dependency_await
+		{
+			dependency* waiting_for;
+
+			bool await_ready();
+
+			inline void await_resume()
+			{}
+			inline constexpr void await_suspend(std::coroutine_handle<coroutine::coroutine_context>)
+			{}
+		};
 
 		struct coroutine_context
 		{
 			int32_t refcount = 0;
 			dependency* waiting_for = nullptr;
+
+#ifdef CDP_TESTING
+			ttf::instance_counter _refcheck;
+#endif
 
 			~coroutine_context()
 			{
@@ -32,7 +47,6 @@ namespace cdp
 			{
 				std::cout << "constructor" << std::endl;
 			}*/
-			
 
 			coroutine get_return_object()
 			{
@@ -52,6 +66,19 @@ namespace cdp
 				//exception_ = std::current_exception();
 			}
 
+			dependency_await await_transform(dependency& d)
+			{
+				waiting_for = &d;
+				return { &d };
+			}
+			dependency_await await_transform(dependency* dptr)
+			{
+				waiting_for = dptr;
+				return { dptr };
+			}
+			void return_void()
+			{
+			}
 
 			/*
 			template <std::convertible_to<uint64_t> From>
@@ -61,9 +88,6 @@ namespace cdp
 				return {};
 			}
 			*/
-			void return_void()
-			{
-			}
 
 			/*
 			template <class ... ARGS>
@@ -82,55 +106,16 @@ namespace cdp
 	public:
 		coroutine() = default;
 	public:
-		
-		coroutine& operator = (const coroutine& other)
-		{
-			coroutine tmp(other);
-			swap(tmp);
-			return (*this);
-		}
-		coroutine& operator = (coroutine&& other)
-		{
-			coroutine tmp;
-			swap(tmp);
-			swap(other);
-			return (*this);
-		}
-		coroutine(coroutine&& other)
-		{
-			swap(other);
-		}
-
-		void swap(coroutine& other)
-		{
-			std::swap(handle, other.handle);
-		}
+		coroutine& operator = (const coroutine& other);
+		coroutine& operator = (coroutine&& other);
+		coroutine(coroutine&& other);
+		void swap(coroutine& other);
 	public:
 		handle_type handle;
-		coroutine(handle_type ht)
-			:handle(std::move(ht))
-		{
-			handle.promise().refcount++;
-		}
-		coroutine(const coroutine& other)
-			:handle(other.handle)
-		{
-			if (handle)
-			{
-				handle.promise().refcount++;
-			}
-		}
-		~coroutine()
-		{
-			if(handle)
-			{
-				if((--handle.promise().refcount) == 0)
-				{
-					handle.destroy();
-				}
-			}
-		}
-
+	public:
+		coroutine(handle_type ht);
+		coroutine(const coroutine& other);
+		~coroutine();
 	};
 
    

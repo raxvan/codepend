@@ -64,6 +64,8 @@ namespace cpd
 
 #include <limits>
 #include <coroutine>
+#include <vector>
+#include <threading>
 
 namespace cdp
 {
