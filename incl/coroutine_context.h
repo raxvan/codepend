@@ -17,7 +17,7 @@ namespace cdp
 
 		struct dependency_await
 		{
-			dependency* waiting_for;
+			dependency* awaiting_dependency;
 
 			bool await_ready();
 			void await_resume();

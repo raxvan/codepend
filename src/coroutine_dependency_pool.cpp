@@ -25,10 +25,22 @@ namespace cdp
 		out.swap(m_tasks[id]);
 	}
 
+	bool coroutine_dependency_pool::empty()
+	{
+		std::lock_guard<threading::spin_lock> _(m_mutex);
+		return m_task_free_ids.size() == m_tasks.size();
+	}
+
+#ifdef CDP_TESTING
+	void coroutine_dependency_pool::clear_for_testing()
+	{
+		m_task_free_ids.clear();
+		m_tasks.clear();
+	}
+#endif
 
 	uint32_t coroutine_dependency_pool::make_task_id()
 	{
-
 		if(m_task_free_ids.size() > 0)
 		{
 			uint32_t i = m_task_free_ids.back();
