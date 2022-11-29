@@ -5,32 +5,13 @@
 
 namespace cdp
 {
-	struct coroutine_pipe
+	struct coroutine_pipe : public threading::async_pipe<coroutine>
 	{
 	protected:
-		threading::async_pipe<coroutine> pipe;
-		coroutine_dependency_pool	     dmp;
+		coroutine_dependency_pool	     m_coroutine_pool;
 	public:
 		void resolve(dependency& dep);
-	public:
-		/*void run(coroutine& co)
-		{
-			while (true)
-			{
-				co.handle();
 
-				if (co.handle.done())
-				{
-					coroutine tmp;
-					tmp.swap(co);
-				}
-
-				auto* dependency = co.handle.promise().waiting_for;
-				TEST_ASSERT(dependency != nullptr);
-				dependency->lock();
-				DEPENDENCY_POOL.push_task(*dependency, std::move(co));
-				dependency->unlock();
-			}
-		}*/
+		void run_frame(coroutine&& co);
 	};
 }

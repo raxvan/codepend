@@ -20,9 +20,8 @@ namespace cdp
 			dependency* waiting_for;
 
 			bool await_ready();
+			void await_resume();
 
-			inline void await_resume()
-			{}
 			inline constexpr void await_suspend(std::coroutine_handle<coroutine::coroutine_context>)
 			{}
 		};

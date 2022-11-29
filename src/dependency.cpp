@@ -5,8 +5,11 @@ namespace cdp
 {
 	uint32_t dependency::resolve()
 	{
-		bool sr = state.exchange(true, std::memory_order_acquire);
-		CDP_ASSERT(sr == false);
+		std::lock_guard<threading::spin_lock> _(mutex);
+		CDP_ASSERT(resolved() == false);
+		state.store(true);
+
+		//detach tasks
 		auto r = first_task;
 		first_task = std::numeric_limits<uint32_t>::max();
 		return r;

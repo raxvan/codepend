@@ -24,6 +24,7 @@ namespace cdp
 
 		void remove_task(const uint32_t id, depdency_task& out);
 	protected:
+		threading::spin_lock 		m_mutex;
 		std::vector<uint32_t> 		m_task_free_ids;
 		std::vector<depdency_task> 	m_tasks;
 	};

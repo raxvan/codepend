@@ -10,6 +10,10 @@ namespace cdp
 		CDP_ASSERT(waiting_for != nullptr);
 		return waiting_for->resolved();
 	}
+	void coroutine::dependency_await::await_resume()
+	{
+		CDP_ASSERT(waiting_for != nullptr && waiting_for->resolved() == true);
+	}
 
 
 	//--------------------------------------------------------------------------------------------------------------------------------

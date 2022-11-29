@@ -3,7 +3,7 @@
 
 namespace cdp
 {
-	void resolve(dependency& dep)
+	void coroutine_pipe::resolve(dependency& dep)
 	{
 		uint32_t task_itr = dep.resolve();
 
@@ -12,7 +12,7 @@ namespace cdp
 			depdency_task dtask;
 
 			{
-				dmp.remove_task(task_itr, dtask);
+				m_coroutine_pool.remove_task(task_itr, dtask);
 				task_itr = dtask.next;
 			}
 
@@ -24,9 +24,41 @@ namespace cdp
 				task_context.waiting_for = nullptr;
 			}
 
-			pipe.push_back(std::move(dtask.task));
+			this->push_back(std::move(dtask.task));
 		}
+	}
 
-		dep.unlock();
+	void coroutine_pipe::run_frame(coroutine&& co)
+	{
+		while (true)
+		{
+			CDP_ASSERT(co.handle);
+			co.handle();
+
+			if (co.handle.done())
+			{
+				coroutine tmp;
+				tmp.swap(co);
+				break;
+			}
+
+			auto& p = co.handle.promise();
+
+			auto* dependency = p.waiting_for;
+			TEST_ASSERT(dependency != nullptr);
+			{
+				std::lock_guard<threading::spin_lock> _(dependency->mutex);
+				if(dependency->resolved())
+				{
+					p.waiting_for = nullptr;
+					continue;//keep executing, the rependency got resolved in the meantime
+				}
+				else
+				{
+					m_coroutine_pool.push_task(*dependency, co);
+					break;
+				}
+			}
+		}
 	}
 }
