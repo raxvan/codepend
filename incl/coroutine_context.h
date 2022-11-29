@@ -2,11 +2,9 @@
 #pragma once
 
 #include "codepend_config.h"
-#include <iostream>
 
 namespace cdp
 {
-
 	struct dependency;
 
 	struct coroutine
@@ -28,6 +26,7 @@ namespace cdp
 
 		struct coroutine_context
 		{
+		public:
 			int32_t refcount = 0;
 			dependency* waiting_for = nullptr;
 
@@ -35,16 +34,21 @@ namespace cdp
 			ttf::instance_counter _refcheck;
 #endif
 
-			~coroutine_context()
-			{
-				CDP_ASSERT(refcount == 0 && waiting_for == nullptr);
-			}
+		public:
+			//await modifiers: https://en.cppreference.com/w/cpp/language/coroutines#co_await
+			dependency_await await_transform(dependency& d);
+			dependency_await await_transform(dependency* dptr);
+
+		public:
+			coroutine_context() = default;
+			~coroutine_context();
+
+		public: //other 
 
 			/*template <class ... ARGS>
 			coroutine_context(controller& _c, ARGS ...)
 				:cntrl(&_c)
 			{
-				std::cout << "constructor" << std::endl;
 			}*/
 
 			coroutine get_return_object()
@@ -65,16 +69,7 @@ namespace cdp
 				//exception_ = std::current_exception();
 			}
 
-			dependency_await await_transform(dependency& d)
-			{
-				waiting_for = &d;
-				return { &d };
-			}
-			dependency_await await_transform(dependency* dptr)
-			{
-				waiting_for = dptr;
-				return { dptr };
-			}
+			
 			void return_void()
 			{
 			}
@@ -92,6 +87,7 @@ namespace cdp
 			template <class ... ARGS>
 			static void* operator new(size_t size, controller&, ARGS ...)
 			{
+				//TODO
 				return ::operator new(size);
 			}
 

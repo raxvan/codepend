@@ -7,14 +7,37 @@ namespace cdp
 
 	bool coroutine::dependency_await::await_ready()
 	{
-		CDP_ASSERT(awaiting_dependency != nullptr);
-		return awaiting_dependency->resolved();
+		return awaiting_dependency == nullptr;
 	}
 	void coroutine::dependency_await::await_resume()
 	{
-		CDP_ASSERT(awaiting_dependency != nullptr && awaiting_dependency->resolved() == true);
+		CDP_ASSERT(awaiting_dependency == nullptr || awaiting_dependency->resolved() == true);
 	}
 
+	coroutine::dependency_await coroutine::coroutine_context::await_transform(dependency& d)
+	{
+		if(d.resolved() == false)
+		{
+			waiting_for = &d;
+			return { &d };
+		}
+		return {nullptr};
+	}
+	coroutine::dependency_await coroutine::coroutine_context::await_transform(dependency* dptr)
+	{
+		CDP_ASSERT(dptr != nullptr);
+		if(dptr->resolved() == false)
+		{
+			waiting_for = dptr;
+			return { dptr };
+		}
+		return {nullptr};
+	}
+
+	coroutine::coroutine_context::~coroutine_context()
+	{
+		CDP_ASSERT(refcount == 0 && waiting_for == nullptr);
+	}
 
 	//--------------------------------------------------------------------------------------------------------------------------------
 
