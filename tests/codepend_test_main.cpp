@@ -13,9 +13,9 @@ cdp::coroutine hello_world()
 cdp::coroutine satisfy_dependncy(cdp::coroutine_pipe& p, cdp::dependency& d)
 {
 	ttf::instance_counter local_guard;
-	std::cout << "dependency resolved." << std::endl;
-
+	std::cout << "resolving dependency..." << std::endl;
 	p.resolve(d);
+	std::cout << "dependency resolved." << std::endl;
 	co_return;
 }
 
