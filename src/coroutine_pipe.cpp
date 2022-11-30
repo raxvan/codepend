@@ -22,11 +22,14 @@ namespace cdp
 			this->push_back(std::move(co));
 		});
 	}
-	void coroutine_pipe::resolve_in_frame(dependency& dep)
+	uint32_t coroutine_pipe::resolve_in_frame(dependency& dep)
 	{
-		pipe_tasks_list(dep.resolve(), [this](coroutine&& co){
-			this->run_frame(std::move(co));
+		uint32_t r = 0;
+		pipe_tasks_list(dep.resolve(), [this, &r](coroutine&& co){
+			if (this->execute_frame(std::move(co)))
+				r++;
 		});
+		return r;
 	}
 
 	bool coroutine_pipe::pipe_empty()
@@ -38,7 +41,16 @@ namespace cdp
 		return m_coroutine_pool.empty();
 	}
 
-	void coroutine_pipe::run_frame(coroutine&& co)
+	void coroutine_pipe::push_back(dependency& dep, coroutine&& co)
+	{
+		std::lock_guard<threading::spin_lock> _(dep);
+		CDP_ASSERT(dep.resolved_state == 0);//unresolved
+		CDP_ASSERT(co.handle.promise().waiting_for == nullptr);
+		co.handle.promise().waiting_for = &dep;
+		m_coroutine_pool.push_task(dep, std::move(co));
+	}
+
+	bool coroutine_pipe::execute_frame(coroutine&& co)
 	{
 		CDP_ASSERT(co.handle);
 		while (true)
@@ -49,22 +61,24 @@ namespace cdp
 			{
 				coroutine tmp;
 				tmp.swap(co);
-				break;
+				return true;
 			}
 
 			auto* dependency = co.handle.promise().waiting_for;
-
 			CDP_ASSERT(dependency != nullptr);
 
 			{
-				std::lock_guard<threading::spin_lock> _(dependency->mutex);
-				if(dependency->resolved_state != 0)
+				std::lock_guard<threading::spin_lock> _(*dependency);
+				if (dependency->resolved_state != 0)
+				{
 					continue;//keep executing, the dependency got resolved in the meantime
+				}
 
-				m_coroutine_pool.push_task(*dependency, co);
+				m_coroutine_pool.push_task(*dependency, std::move(co));
 				break;
 			}
 		}
+		return false;
 	}
 
 #ifdef CDP_TESTING

@@ -16,6 +16,8 @@ namespace cdp
 
 	coroutine::dependency_await coroutine::coroutine_context::await_transform(dependency& d)
 	{
+		//we check here if it's resolved or not so we can later assert if we waited on it
+		CDP_ASSERT(waiting_for == nullptr);
 		if(d.resolved() == false)
 		{
 			waiting_for = &d;
@@ -25,7 +27,7 @@ namespace cdp
 	}
 	coroutine::dependency_await coroutine::coroutine_context::await_transform(dependency* dptr)
 	{
-		CDP_ASSERT(dptr != nullptr);
+		CDP_ASSERT(dptr != nullptr && waiting_for == nullptr);
 		if(dptr->resolved() == false)
 		{
 			waiting_for = dptr;
@@ -40,6 +42,14 @@ namespace cdp
 	}
 
 	//--------------------------------------------------------------------------------------------------------------------------------
+	
+	coroutine& coroutine::operator >> (threading::barrier& b)
+	{
+		CDP_ASSERT(handle);
+		CDP_ASSERT(handle.promise().on_destroy == nullptr);
+		handle.promise().on_destroy = &b;
+		return (*this);
+	}
 
 	coroutine& coroutine::operator = (const coroutine& other)
 	{
@@ -81,9 +91,14 @@ namespace cdp
 	{
 		if(handle)
 		{
-			if((--handle.promise().refcount) == 0)
+			auto r = (--handle.promise().refcount);
+			CDP_ASSERT(r >= 0);
+			if(r == 0)
 			{
+				auto* on_destroy = handle.promise().on_destroy;
 				handle.destroy();
+				if(on_destroy != nullptr)
+					on_destroy->arrive_and_wait();
 			}
 		}
 	}

@@ -1,11 +1,10 @@
 
 #pragma once
 
-#include "codepend_config.h"
+#include "dependency.h"
 
 namespace cdp
 {
-	struct dependency;
 
 	struct coroutine
 	{
@@ -18,7 +17,7 @@ namespace cdp
 			dependency* awaiting_dependency;
 
 			bool await_ready();
-			void await_resume();
+			void await_resume(); //the result of await_resume is the result of `co_await EXPR`
 
 			inline constexpr void await_suspend(std::coroutine_handle<coroutine::coroutine_context>)
 			{}
@@ -30,6 +29,7 @@ namespace cdp
 			int32_t refcount = 0;
 			dependency* waiting_for = nullptr;
 
+			threading::barrier* on_destroy = nullptr;
 #ifdef CDP_TESTING
 			ttf::instance_counter _refcheck;
 #endif
@@ -111,6 +111,9 @@ namespace cdp
 		coroutine(handle_type ht);
 		coroutine(const coroutine& other);
 		~coroutine();
+
+	public:
+		coroutine& operator >> (threading::barrier& b);
 	};
 
    

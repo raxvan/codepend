@@ -4,7 +4,7 @@
 
 namespace cdp
 {
-	void coroutine_dependency_pool::push_task(dependency& target_dependency, coroutine& task)
+	void coroutine_dependency_pool::push_task(dependency& target_dependency, coroutine&& task)
 	{
 		std::lock_guard<threading::spin_lock> _(m_mutex);
 		uint32_t tid;

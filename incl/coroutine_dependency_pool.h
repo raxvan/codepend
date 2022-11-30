@@ -19,7 +19,8 @@ namespace cdp
 	struct coroutine_dependency_pool
 	{
 	public:
-		void push_task(dependency& target_dependency, coroutine& task);
+		void push_task(dependency& target_dependency, coroutine&& task);
+		
 		uint32_t make_task_id();
 
 		void remove_task(const uint32_t id, depdency_task& out);
