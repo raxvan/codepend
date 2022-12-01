@@ -68,6 +68,8 @@ namespace cdp
 			if (ffunc.run(co, *this, recursive))
 				continue;
 
+			CDP_ASSERT(!co.handle);
+
 			return false;
 		}
 	}

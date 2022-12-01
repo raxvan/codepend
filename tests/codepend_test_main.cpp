@@ -43,7 +43,7 @@ void basic_coroutine_test()
 		pipe.push_async(hello_world());
 		pipe.push_async(satisfy_dependncy(dep1));
 		pipe.push_async(wait_on_dependency(dep1));
-		pipe.consume_loop([&](cdp::coroutine&& co) { pipe.execute_frame(co, false); });
+		pipe.consume_loop([&](cdp::coroutine&& co) { pipe.execute_frame(co, true); });
 		TEST_ASSERT(pipe.pipe_empty() == true);
 
 		{
