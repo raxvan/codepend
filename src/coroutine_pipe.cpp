@@ -12,18 +12,6 @@ namespace cdp
 		CDP_ASSERT(pipe_empty() == true);
 	}
 
-	/*dependency coroutine_pipe::create_dependency()
-	{
-		return dependency(*this);
-	}*/
-
-	/*void coroutine_pipe::_remove_waiting_dependency(coroutine& co)
-	{
-		auto& task_context = co.handle.promise();
-		CDP_ASSERT(task_context.waiting_for != nullptr);
-		task_context.waiting_for = nullptr;
-	}*/
-
 	bool coroutine_pipe::pipe_empty()
 	{
 		return threading::async_pipe<coroutine>::empty();

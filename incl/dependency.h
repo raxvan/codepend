@@ -10,12 +10,6 @@ namespace cdp
 	struct dependency : public threading::spin_lock
 	{
 	public:
-		/*
-		void 	 resolve(const uint32_t payload = 0);
-		void 	 resolve_in_frame(const uint32_t payload = 0);
-		bool     resolved();
-		*/
-	public:
 		~dependency();
 
 		dependency() = default;

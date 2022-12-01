@@ -69,10 +69,6 @@ namespace cpd
 
 namespace cdp
 {
-	using dependency_handle_t = uint32_t;
 
-	constexpr uint32_t invalid_dependency_handle()
-	{
-		return std::numeric_limits<uint32_t>::max();
-	}
+	
 }

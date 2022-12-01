@@ -167,11 +167,11 @@ namespace cdp
 		coroutine(coroutine&& other);
 		void swap(coroutine& other);
 		void reset();
-	public:
-		handle_type handle;
+	
 	public:
 		coroutine(const coroutine& other);
 		~coroutine();
+		
 	protected:
 		friend struct coroutine_pipe;
 		friend struct dependency;
@@ -179,6 +179,9 @@ namespace cdp
 		coroutine(const handle_type& ht);
 		void attach(const handle_type& ht);
 		handle_type detach();
+
+	public:
+		handle_type handle;
 	};
 
 	using cohandle = coroutine::handle_type;
