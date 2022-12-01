@@ -5,7 +5,10 @@
 
 namespace cdp
 {
+	template <class T>
+	struct result;
 	struct dependency;
+	
 	struct coroutine_pipe;
 	struct coroutine;
 
@@ -47,11 +50,17 @@ namespace cdp
 			static bool frame_function(suspend_context&, coroutine&, coroutine_pipe&, const bool recursive);
 		};
 
+		struct resolved_dependency_yield
+		{
+			handle_type resolve_list;	
+		};
+
 		struct dependency_resolve : public suspend_context
 		{
 			handle_type resolve_list;
 
 			dependency_resolve(dependency& d, coroutine_context& coctx, const uint32_t payload = 0);
+			dependency_resolve(resolved_dependency_yield d, coroutine_context& coctx);
 
 			bool await_ready();
 
@@ -91,6 +100,9 @@ namespace cdp
 				CDP_ASSERT(dptr != nullptr);
 				return dependency_await(*dptr, *this);
 			}
+			//template <class T>
+			//dependency_result_await<T> await_transform(result<T>& d);
+
 			inline dependency_resolve yield_value(dependency& d)
 			{
 				return dependency_resolve(d, *this);
@@ -99,6 +111,10 @@ namespace cdp
 			{
 				CDP_ASSERT(dptr != nullptr);
 				return dependency_resolve(*dptr, *this);
+			}
+			inline dependency_resolve yield_value(resolved_dependency_yield di)
+			{
+				return dependency_resolve(di, *this);
 			}
 
 		public:

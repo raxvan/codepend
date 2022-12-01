@@ -31,6 +31,13 @@ namespace cdp
 		coctx.frame_function.func = dependency_resolve::frame_function;
 		coctx.frame_function.context = this;
 	}
+	coroutine::dependency_resolve::dependency_resolve(resolved_dependency_yield d, coroutine_context& coctx)
+	{
+		resolve_list = d.resolve_list;
+		CDP_ASSERT(coctx.frame_function.valid() == false);
+		coctx.frame_function.func = dependency_resolve::frame_function;
+		coctx.frame_function.context = this;
+	}
 	bool coroutine::dependency_resolve::await_ready()
 	{
 		if (resolve_list)

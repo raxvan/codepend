@@ -40,4 +40,41 @@ namespace cdp
 
 	//--------------------------------------------------------------------------------------------------------------------------------
 
+	template <class T>
+	struct result : public dependency
+	{
+	public:
+		T value;
+
+	public:
+		inline coroutine::resolved_dependency_yield operator = (const T& v)
+		{
+			coroutine::handle_type rl;
+			{
+				std::lock_guard<threading::spin_lock> _(*this);
+				value = v;
+				rl = _resolve_locked(0);
+			}
+			return { rl };
+		}
+		inline coroutine::resolved_dependency_yield operator = (T&& v)
+		{
+			coroutine::handle_type rl;
+			{
+				std::lock_guard<threading::spin_lock> _(*this);
+				value = std::move(v);
+				rl = _resolve_locked(0);
+			}
+			return { rl };
+		}
+	};
+
+	//--------------------------------------------------------------------------------------------------------------------------------
+
+	/*template <class T>
+	inline coroutine::dependency_await coroutine::coroutine_context::await_transform(result<T>& d)
+	{
+
+	}*/
+
 }
