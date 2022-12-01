@@ -8,22 +8,19 @@ namespace cdp
 	struct coroutine_pipe : public threading::async_pipe<coroutine>
 	{
 	protected:
-		coroutine_dependency_pool	     m_coroutine_pool;
+		coroutine_dependency_pool m_coroutine_pool;
 	public:
-		void resolve(dependency& dep);//resolve dependency, queue coroutines to pipe
-		
-	public:
-		uint32_t resolve_in_frame(dependency& dep);
-		//^resolve rependency, run coroutines in the current frame, 
-		//returns the number of coroutines that finished
+		dependency create_dependency();
+
 		bool execute_frame(coroutine&& co);//return true if coroutine has finished
 
+	public:
 		bool pipe_empty();
 		bool dependency_empty();
-
+		
 	public:
-		using threading::async_pipe<coroutine>::push_back;
-		void push_back(dependency& dep, coroutine&& co);
+		void push_async(coroutine&& co);
+		void push_to(dependency& dep, coroutine&& co);
 
 	public:
 		~coroutine_pipe();
@@ -34,8 +31,8 @@ namespace cdp
 #endif
 
 	protected:
-		template <class T>
-		friend struct constref_dependency;
+		using threading::async_pipe<coroutine>::push_back;
+		friend struct dependency;
 
 		static void _remove_waiting_dependency(coroutine& co);
 		template <class F>
@@ -58,6 +55,7 @@ namespace cdp
 
 	};
 
+	/*
 	template <class T>
 	inline void constref_dependency<T>::resolve(const T& v)
 	{
@@ -72,4 +70,6 @@ namespace cdp
 			pipe->push_back(std::move(co));
 		});
 	}
+	*/
+
 }

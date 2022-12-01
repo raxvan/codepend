@@ -4,27 +4,55 @@
 
 namespace cdp
 {
-
 	struct coroutine_pipe;
 
+	//--------------------------------------------------------------------------------------------------------------------------------
 	struct dependency : public threading::spin_lock
 	{
+	public:
+		void 	 resolve(const uint32_t payload = 0);
+		void 	 resolve_in_frame(const uint32_t payload = 0);
+		bool     resolved();
+
+		bool 	 owned(const coroutine_pipe* pipe) const;
+
+		coroutine_pipe& pipe();
+	public:
+		dependency(coroutine_pipe& p)
+			:m_owner(&p)
+		{}
+		dependency() = default;
+
+		dependency(const dependency&) = delete;
+		dependency(dependency&&) = delete;
+		dependency& operator = (const dependency&) = delete;
+		dependency& operator = (dependency&&) = delete;
+
+	public:
+		void set(coroutine_pipe& p);
+		void set(coroutine_pipe* p);
+
 	protected:
 		friend struct coroutine_pipe;
 		friend struct coroutine_dependency_pool;
+		
+		
+	protected:
+		bool 	 _isresolved_locked() const;
+		uint32_t _resolve(const uint32_t payload);
+		uint32_t _resolve_locked(const uint32_t payload);
 
-		uint32_t resolved_state = 0;
 
-		uint32_t first_task = std::numeric_limits<uint32_t>::max();
-	public:
-		uint32_t resolve();
-		bool     resolved();
+	protected:
+		coroutine_pipe* m_owner = nullptr;
+		uint32_t m_first_task = std::numeric_limits<uint32_t>::max();
 
-	private:
-		bool 	 _resolved_locked() const;
-		uint32_t _resolve_locked();
+		uint32_t m_payload = std::numeric_limits<uint32_t>::max();
 	};
 
+	//--------------------------------------------------------------------------------------------------------------------------------
+
+	/*
 	template <class T>
 	struct constref_dependency : public dependency
 	{
@@ -47,4 +75,5 @@ namespace cdp
 			return value;
 		}
 	};
+	*/
 }

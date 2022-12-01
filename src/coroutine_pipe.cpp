@@ -10,28 +10,17 @@ namespace cdp
 		CDP_ASSERT(dependency_empty() == true);
 	}
 
+	dependency coroutine_pipe::create_dependency()
+	{
+		return dependency(*this);
+	}
+
 	void coroutine_pipe::_remove_waiting_dependency(coroutine& co)
 	{
 		auto& task_context = co.handle.promise();
 		CDP_ASSERT(task_context.waiting_for != nullptr);
 		task_context.waiting_for = nullptr;
 	}
-	void coroutine_pipe::resolve(dependency& dep)
-	{
-		pipe_tasks_list(dep.resolve(), [this](coroutine&& co){
-			this->push_back(std::move(co));
-		});
-	}
-	uint32_t coroutine_pipe::resolve_in_frame(dependency& dep)
-	{
-		uint32_t r = 0;
-		pipe_tasks_list(dep.resolve(), [this, &r](coroutine&& co){
-			if (this->execute_frame(std::move(co)))
-				r++;
-		});
-		return r;
-	}
-
 	bool coroutine_pipe::pipe_empty()
 	{
 		return threading::async_pipe<coroutine>::empty();
@@ -41,12 +30,15 @@ namespace cdp
 		return m_coroutine_pool.empty();
 	}
 
-	void coroutine_pipe::push_back(dependency& dep, coroutine&& co)
+	void coroutine_pipe::push_async(coroutine&& co)
+	{
+		threading::async_pipe<coroutine>::push_back(std::move(co));
+	}
+	void coroutine_pipe::push_to(dependency& dep, coroutine&& co)
 	{
 		std::lock_guard<threading::spin_lock> _(dep);
-		CDP_ASSERT(dep.resolved_state == 0);//unresolved
-		CDP_ASSERT(co.handle.promise().waiting_for == nullptr);
-		co.handle.promise().waiting_for = &dep;
+		CDP_ASSERT(dep._isresolved_locked() == false);//unresolved
+		co.setwaiting(dep);
 		m_coroutine_pool.push_task(dep, std::move(co));
 	}
 
@@ -65,13 +57,14 @@ namespace cdp
 			}
 
 			auto* dependency = co.handle.promise().waiting_for;
-			CDP_ASSERT(dependency != nullptr);
+			CDP_ASSERT(dependency != nullptr && dependency->owned(this));
 
 			{
 				std::lock_guard<threading::spin_lock> _(*dependency);
-				if (dependency->resolved_state != 0)
+				if (dependency->_isresolved_locked())
 				{
-					continue;//keep executing, the dependency got resolved in the meantime
+					//keep executing, the dependency got resolved in the meantime
+					continue;
 				}
 
 				m_coroutine_pool.push_task(*dependency, std::move(co));

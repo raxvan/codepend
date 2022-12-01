@@ -7,14 +7,12 @@ namespace cdp
 	void coroutine_dependency_pool::push_task(dependency& target_dependency, coroutine&& task)
 	{
 		std::lock_guard<threading::spin_lock> _(m_mutex);
-		uint32_t tid;
-		{
-			tid = make_task_id();
-			auto& td = m_tasks[tid];
-			td.task = std::move(task);
-			td.next = target_dependency.first_task;
-		}
-		target_dependency.first_task = tid;
+		
+		uint32_t tid = make_task_id();
+		auto& td = m_tasks[tid];
+		td.task = std::move(task);
+		td.next = target_dependency.m_first_task;
+		target_dependency.m_first_task = tid;
 	}
 
 	void coroutine_dependency_pool::remove_task(const uint32_t id, depdency_task& out)

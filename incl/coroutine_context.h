@@ -2,6 +2,7 @@
 #pragma once
 
 #include "dependency.h"
+#include "coroutine_signal.h"
 
 namespace cdp
 {
@@ -26,13 +27,14 @@ namespace cdp
 		struct coroutine_context
 		{
 		public:
-			int32_t refcount = 0;
-			dependency* waiting_for = nullptr;
-
-			threading::barrier* on_destroy = nullptr;
 #ifdef CDP_TESTING
 			ttf::instance_counter _refcheck;
 #endif
+		public:
+			int32_t refcount = 0;
+			dependency* waiting_for = nullptr;
+
+			cosignal*   destroy_signal = nullptr;
 
 		public:
 			//await modifiers: https://en.cppreference.com/w/cpp/language/coroutines#co_await
@@ -112,8 +114,10 @@ namespace cdp
 		coroutine(const coroutine& other);
 		~coroutine();
 
+		bool iswaiting() const;
+		void setwaiting(dependency& d);
 	public:
-		coroutine& operator >> (threading::barrier& b);
+		//coroutine& operator >> (threading::barrier& b);
 	};
 
    

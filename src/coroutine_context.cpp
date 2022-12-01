@@ -42,13 +42,25 @@ namespace cdp
 	}
 
 	//--------------------------------------------------------------------------------------------------------------------------------
-	
+	/*
 	coroutine& coroutine::operator >> (threading::barrier& b)
 	{
 		CDP_ASSERT(handle);
-		CDP_ASSERT(handle.promise().on_destroy == nullptr);
-		handle.promise().on_destroy = &b;
+		CDP_ASSERT(handle.promise().destroy_signal == nullptr);
+		handle.promise().destroy_signal = &b;
 		return (*this);
+	}
+	*/
+
+	bool coroutine::iswaiting() const
+	{
+		CDP_ASSERT(handle);
+		return handle.promise().waiting_for != nullptr;
+	}
+	void coroutine::setwaiting(dependency& d)
+	{
+		CDP_ASSERT(handle && handle.promise().waiting_for == nullptr);
+		handle.promise().waiting_for = &d;
 	}
 
 	coroutine& coroutine::operator = (const coroutine& other)
@@ -87,6 +99,7 @@ namespace cdp
 			handle.promise().refcount++;
 		}
 	}
+
 	coroutine::~coroutine()
 	{
 		if(handle)
@@ -95,10 +108,10 @@ namespace cdp
 			CDP_ASSERT(r >= 0);
 			if(r == 0)
 			{
-				auto* on_destroy = handle.promise().on_destroy;
+				auto* destroy_signal = handle.promise().destroy_signal;
 				handle.destroy();
-				if(on_destroy != nullptr)
-					on_destroy->arrive_and_wait();
+				if(destroy_signal != nullptr)
+					destroy_signal->arrive_and_continue();
 			}
 		}
 	}
