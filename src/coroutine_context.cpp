@@ -86,11 +86,20 @@ namespace cdp
 		std::swap(handle, other.handle);
 	}
 
+	coroutine::handle_type coroutine::detach()
+	{
+		return std::move(handle);
+	}
+	void coroutine::attach(handle_type& ht)
+	{
+		CDP_ASSERT(!handle);
+		std::swap(handle,ht);
+	}
 	coroutine::coroutine(handle_type ht)
 		:handle(std::move(ht))
 	{
-		handle.promise().refcount++;
 	}
+
 	coroutine::coroutine(const coroutine& other)
 		:handle(other.handle)
 	{
@@ -99,6 +108,9 @@ namespace cdp
 			handle.promise().refcount++;
 		}
 	}
+
+	
+
 
 	coroutine::~coroutine()
 	{

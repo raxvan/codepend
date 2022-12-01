@@ -32,42 +32,42 @@ void basic_coroutine_test()
 {
 	cdp::coroutine_pipe pipe;
 
-	cdp::dependency dep1 = pipe.create_dependency();
-	pipe.push_async(hello_world());
-	pipe.push_async(satisfy_dependncy(dep1));
-	pipe.push_async(wait_on_dependency(dep1));
-	pipe.consume_loop([&](cdp::coroutine&& co) {
-		pipe.execute_frame(std::move(co));
-	});
-	TEST_ASSERT(pipe.pipe_empty() == true);
-	TEST_ASSERT(pipe.dependency_empty() == true);
-
 	{
+		cdp::dependency dep1 = pipe.create_dependency();
 		pipe.push_async(hello_world());
-		TEST_ASSERT(pipe.pipe_empty() == false);
+		pipe.push_async(satisfy_dependncy(dep1));
+		pipe.push_async(wait_on_dependency(dep1));
 		pipe.consume_loop([&](cdp::coroutine&& co) {
 			pipe.execute_frame(std::move(co));
-		});
-	}
+			});
+		TEST_ASSERT(pipe.pipe_empty() == true);
 
-	{
-		cdp::dependency dep2 = pipe.create_dependency();
-		
-		auto cogen = [](cdp::dependency& dep) -> cdp::coroutine {
-			ttf::instance_counter local_variable;
-			co_await dep;
-		};
 		{
-			auto co = cogen(dep2);
-			auto cobk = co;
-			pipe.execute_frame(std::move(co));
-			cobk.handle.promise().waiting_for = nullptr; //to avoid obvois check when coroutines are killed when are not completed
+			pipe.push_async(hello_world());
+			TEST_ASSERT(pipe.pipe_empty() == false);
+			pipe.consume_loop([&](cdp::coroutine&& co) {
+				pipe.execute_frame(std::move(co));
+				});
 		}
-		
-		TEST_ASSERT(pipe.pipe_empty() == true);//because cogen is waiting
-		TEST_ASSERT(pipe.dependency_empty() == false);//because this is where cogein is waiting 
-		pipe.force_clear_dependency_tasks();
-		TEST_ASSERT(pipe.dependency_empty() == true);
+
+		{
+			cdp::dependency dep2 = pipe.create_dependency();
+
+			auto cogen = [](cdp::dependency& dep) -> cdp::coroutine {
+				ttf::instance_counter local_variable;
+				co_await dep;
+			};
+			{
+				auto co = cogen(dep2);
+				auto cobk = co;
+				pipe.execute_frame(std::move(co));
+			}
+
+			dep2.resolve_in_frame();
+
+			TEST_ASSERT(pipe.pipe_empty() == true);//because cogen is waiting
+			pipe.force_clear_dependency_tasks();
+		}
 	}
 
 }

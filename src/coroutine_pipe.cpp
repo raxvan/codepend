@@ -1,5 +1,6 @@
 
 #include <coroutine_pipe.h>
+#include <dependency.h>
 
 namespace cdp
 {
@@ -7,7 +8,6 @@ namespace cdp
 	coroutine_pipe::~coroutine_pipe()
 	{
 		CDP_ASSERT(pipe_empty() == true);
-		CDP_ASSERT(dependency_empty() == true);
 	}
 
 	dependency coroutine_pipe::create_dependency()
@@ -15,20 +15,18 @@ namespace cdp
 		return dependency(*this);
 	}
 
-	void coroutine_pipe::_remove_waiting_dependency(coroutine& co)
+	/*void coroutine_pipe::_remove_waiting_dependency(coroutine& co)
 	{
 		auto& task_context = co.handle.promise();
 		CDP_ASSERT(task_context.waiting_for != nullptr);
 		task_context.waiting_for = nullptr;
-	}
+	}*/
+
 	bool coroutine_pipe::pipe_empty()
 	{
 		return threading::async_pipe<coroutine>::empty();
 	}
-	bool coroutine_pipe::dependency_empty()
-	{
-		return m_coroutine_pool.empty();
-	}
+	
 
 	void coroutine_pipe::push_async(coroutine&& co)
 	{
@@ -39,7 +37,11 @@ namespace cdp
 		std::lock_guard<threading::spin_lock> _(dep);
 		CDP_ASSERT(dep._isresolved_locked() == false);//unresolved
 		co.setwaiting(dep);
-		m_coroutine_pool.push_task(dep, std::move(co));
+		
+		auto cohandle = co.detach();
+				
+		cohandle.promise().next = std::move(dep.waiting_list);
+		dep.waiting_list = std::move(cohandle);
 	}
 
 	bool coroutine_pipe::execute_frame(coroutine&& co)
@@ -67,7 +69,11 @@ namespace cdp
 					continue;
 				}
 
-				m_coroutine_pool.push_task(*dependency, std::move(co));
+				auto cohandle = co.detach();
+				
+				cohandle.promise().next = std::move(dependency->waiting_list);
+				dependency->waiting_list = std::move(cohandle);
+
 				break;
 			}
 		}
@@ -77,7 +83,6 @@ namespace cdp
 #ifdef CDP_TESTING
 	void coroutine_pipe::force_clear_dependency_tasks()
 	{
-		m_coroutine_pool.clear_for_testing();
 	}
 #endif
 }

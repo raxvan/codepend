@@ -1,14 +1,11 @@
 #pragma once
 
 #include "dependency.h"
-#include "coroutine_dependency_pool.h"
 
 namespace cdp
 {
 	struct coroutine_pipe : public threading::async_pipe<coroutine>
 	{
-	protected:
-		coroutine_dependency_pool m_coroutine_pool;
 	public:
 		dependency create_dependency();
 
@@ -34,8 +31,8 @@ namespace cdp
 		using threading::async_pipe<coroutine>::push_back;
 		friend struct dependency;
 
-		static void _remove_waiting_dependency(coroutine& co);
-		template <class F>
+		//static void _remove_waiting_dependency(coroutine& co);
+		/*template <class F>
 		inline void pipe_tasks_list(uint32_t task_itr, const F& _func)
 		{
 			while(task_itr != std::numeric_limits<uint32_t>::max())
@@ -51,7 +48,7 @@ namespace cdp
 
 				_func(std::move(dtask.task));
 			}
-		}
+		}*/
 
 	};
 

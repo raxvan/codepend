@@ -1,12 +1,11 @@
 
 #pragma once
 
-#include "dependency.h"
 #include "coroutine_signal.h"
 
 namespace cdp
 {
-
+	struct dependency;
 	struct coroutine
 	{
 		struct coroutine_context;
@@ -31,7 +30,10 @@ namespace cdp
 			ttf::instance_counter _refcheck;
 #endif
 		public:
-			int32_t refcount = 0;
+			int32_t refcount = 1;
+
+			handle_type next;
+
 			dependency* waiting_for = nullptr;
 
 			cosignal*   destroy_signal = nullptr;
@@ -56,6 +58,7 @@ namespace cdp
 			coroutine get_return_object()
 			{
 				auto h = handle_type::from_promise(*this);
+				refcount++;
 				return coroutine(std::move(h));
 			}
 			std::suspend_always initial_suspend()
@@ -110,12 +113,18 @@ namespace cdp
 	public:
 		handle_type handle;
 	public:
-		coroutine(handle_type ht);
 		coroutine(const coroutine& other);
 		~coroutine();
 
 		bool iswaiting() const;
 		void setwaiting(dependency& d);
+
+	protected:
+		friend struct coroutine_pipe;
+		friend struct dependency;
+		coroutine(handle_type ht);
+		handle_type detach();
+		void attach(handle_type& ht);
 	public:
 		//coroutine& operator >> (threading::barrier& b);
 	};

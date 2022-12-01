@@ -1,6 +1,6 @@
 #pragma once
 
-#include "codepend_config.h"
+#include "coroutine_context.h"
 
 namespace cdp
 {
@@ -21,6 +21,7 @@ namespace cdp
 		dependency(coroutine_pipe& p)
 			:m_owner(&p)
 		{}
+		~dependency();
 		dependency() = default;
 
 		dependency(const dependency&) = delete;
@@ -39,13 +40,14 @@ namespace cdp
 		
 	protected:
 		bool 	 _isresolved_locked() const;
-		uint32_t _resolve(const uint32_t payload);
-		uint32_t _resolve_locked(const uint32_t payload);
+		
+		//uint32_t _resolve(const uint32_t payload);
+		//uint32_t _resolve_locked(const uint32_t payload);
 
 
 	protected:
-		coroutine_pipe* m_owner = nullptr;
-		uint32_t m_first_task = std::numeric_limits<uint32_t>::max();
+		coroutine_pipe* 		m_owner = nullptr;
+		coroutine::handle_type 	waiting_list;
 
 		uint32_t m_payload = std::numeric_limits<uint32_t>::max();
 	};
