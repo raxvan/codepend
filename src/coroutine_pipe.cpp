@@ -5,15 +5,17 @@
 namespace cdp
 {
 
+
+
 	coroutine_pipe::~coroutine_pipe()
 	{
 		CDP_ASSERT(pipe_empty() == true);
 	}
 
-	dependency coroutine_pipe::create_dependency()
+	/*dependency coroutine_pipe::create_dependency()
 	{
 		return dependency(*this);
-	}
+	}*/
 
 	/*void coroutine_pipe::_remove_waiting_dependency(coroutine& co)
 	{
@@ -27,62 +29,63 @@ namespace cdp
 		return threading::async_pipe<coroutine>::empty();
 	}
 	
-
 	void coroutine_pipe::push_async(coroutine&& co)
 	{
 		threading::async_pipe<coroutine>::push_back(std::move(co));
 	}
+	
 	void coroutine_pipe::push_to(dependency& dep, coroutine&& co)
 	{
 		std::lock_guard<threading::spin_lock> _(dep);
 		CDP_ASSERT(dep._isresolved_locked() == false);//unresolved
-		co.setwaiting(dep);
-		
+
 		auto cohandle = co.detach();
 				
-		cohandle.promise().next = std::move(dep.waiting_list);
-		dep.waiting_list = std::move(cohandle);
+		cohandle.promise().next = dep.waiting_list;
+		dep.waiting_list = cohandle;
 	}
 
-	bool coroutine_pipe::execute_frame(coroutine&& co)
+	void coroutine_pipe::resolve_recursive(dependency& d, const uint32_t payload)
 	{
-		CDP_ASSERT(co.handle);
+		auto h = d.resolve(payload);
+		while(h)
+		{
+			coroutine::handle_type hnext;
+			{
+				auto& p = h.promise();
+				hnext = p.next;
+				p.next = coroutine::handle_type{};
+			}
+			coroutine co(h);
+			this->execute_frame(co, true);
+			h = hnext;
+		}
+	}
+
+	bool coroutine_pipe::execute_frame(coroutine& co, const bool recursive)
+	{
+		auto h = co.handle;
 		while (true)
 		{
-			co.handle();
+			h();
 
-			if (co.handle.done())
+			if (h.done())
 			{
-				coroutine tmp;
-				tmp.swap(co);
+				co.reset();
 				return true;
 			}
 
-			auto* dependency = co.handle.promise().waiting_for;
-			CDP_ASSERT(dependency != nullptr && dependency->owned(this));
+			auto ffunc = h.promise().frame_function;
+			
+			h.promise().frame_function.reset();
 
-			{
-				std::lock_guard<threading::spin_lock> _(*dependency);
-				if (dependency->_isresolved_locked())
-				{
-					//keep executing, the dependency got resolved in the meantime
-					continue;
-				}
+			if(ffunc.run(co, *this, recursive))
+				continue;
 
-				auto cohandle = co.detach();
-				
-				cohandle.promise().next = std::move(dependency->waiting_list);
-				dependency->waiting_list = std::move(cohandle);
-
-				break;
-			}
+			return false;
 		}
-		return false;
+		
 	}
 
-#ifdef CDP_TESTING
-	void coroutine_pipe::force_clear_dependency_tasks()
-	{
-	}
-#endif
+
 }

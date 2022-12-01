@@ -14,7 +14,7 @@ cdp::coroutine satisfy_dependncy(cdp::dependency& d)
 {
 	ttf::instance_counter local_guard;
 	std::cout << "resolving dependency..." << std::endl;
-	d.resolve();
+	co_yield d;
 	std::cout << "dependency resolved." << std::endl;
 	co_return;
 }
@@ -33,25 +33,25 @@ void basic_coroutine_test()
 	cdp::coroutine_pipe pipe;
 
 	{
-		cdp::dependency dep1 = pipe.create_dependency();
+		cdp::dependency dep1;
 		pipe.push_async(hello_world());
 		pipe.push_async(satisfy_dependncy(dep1));
 		pipe.push_async(wait_on_dependency(dep1));
 		pipe.consume_loop([&](cdp::coroutine&& co) {
-			pipe.execute_frame(std::move(co));
-			});
+			pipe.execute_frame(co, false);
+		});
 		TEST_ASSERT(pipe.pipe_empty() == true);
 
 		{
 			pipe.push_async(hello_world());
 			TEST_ASSERT(pipe.pipe_empty() == false);
 			pipe.consume_loop([&](cdp::coroutine&& co) {
-				pipe.execute_frame(std::move(co));
+				pipe.execute_frame(co, false);
 				});
 		}
 
 		{
-			cdp::dependency dep2 = pipe.create_dependency();
+			cdp::dependency dep2;
 
 			auto cogen = [](cdp::dependency& dep) -> cdp::coroutine {
 				ttf::instance_counter local_variable;
@@ -60,13 +60,12 @@ void basic_coroutine_test()
 			{
 				auto co = cogen(dep2);
 				auto cobk = co;
-				pipe.execute_frame(std::move(co));
+				pipe.execute_frame(co, false);
 			}
 
-			dep2.resolve_in_frame();
+			pipe.resolve_recursive(dep2);
 
 			TEST_ASSERT(pipe.pipe_empty() == true);//because cogen is waiting
-			pipe.force_clear_dependency_tasks();
 		}
 	}
 
@@ -91,7 +90,7 @@ cdp::coroutine resolving_coroutine(dependency_array& dvec, std::size_t index)
 {
 	//wait first
 	ttf::instance_counter local_guard;
-	dvec[(index * 6949) % dvec.size()].resolve();
+	co_yield dvec[(index * 6949) % dvec.size()];
 	co_return;
 }
 
@@ -106,7 +105,7 @@ void test_more_coroutines()
 
 		auto thread_job = [&](const std::size_t) {
 			pipe.consume_loop_or_wait([&](cdp::coroutine&& co) {
-				pipe.execute_frame(std::move(co));
+				pipe.execute_frame(co, false);
 			});
 		};
 
@@ -123,8 +122,7 @@ void test_more_coroutines()
 
 	{
 		dependency_array darray;
-		for (auto& d : darray)
-			d.set(pipe);
+
 		std::atomic<int64_t> counter{ 0 };
 		std::atomic<int64_t> guard{ 0 };
 		for (std::size_t i = 0; i < darray.size(); i++)
@@ -137,6 +135,7 @@ void test_more_coroutines()
 		pipe.evict();
 		std::cout << std::endl;
 		TEST_ASSERT(counter.load() > 0);
+
 		for (std::size_t i = 0; i < darray.size(); i++)
 			TEST_ASSERT(darray[i].resolved() == true);
 
@@ -158,8 +157,6 @@ void test_coroutine_dependency()
 	std::array<std::thread, 3> threads;
 
 	std::array<cdp::dependency, 3> thread_dependency;
-	for (auto& d : thread_dependency)
-		d.set(pipe);
 
 	auto await_for_thread = [&](const std::size_t index)->cdp::coroutine {
 		co_await thread_dependency[index];
@@ -173,7 +170,7 @@ void test_coroutine_dependency()
 		threading::latch e{ uint32_t(threads.size() + 1) };
 
 		auto thread_job = [&](const std::size_t index) {
-			thread_dependency[index].resolve_in_frame();
+			pipe.resolve_recursive(thread_dependency[index],0);
 		};
 
 		for (std::size_t i = 0; i < threads.size(); i++)
