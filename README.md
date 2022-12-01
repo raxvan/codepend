@@ -5,10 +5,10 @@ So about this repository ... it's about c++20 coroutines and threads. If you wan
 
 Here is an example:
 ```
-cdp::coroutine satisfy_dependncy(cdp::coroutine_pipe& p, cdp::dependency& d)
+cdp::coroutine satisfy_dependncy(cdp::dependency& d)
 {
 	std::cout << "resolving dependency..." << std::endl;
-	p.resolve(d);
+	co_yield d; //resolve dependency
 	std::cout << "dependency resolved." << std::endl;
 	co_return;
 }
@@ -26,10 +26,10 @@ void execute_all()
 	cdp::coroutine_pipe pipe;
 
 	cdp::dependency dep1;
-	pipe.push_back(satisfy_dependncy(pipe, dep1));
-	pipe.push_back(wait_on_dependency(dep1));
+	pipe.push_async(satisfy_dependncy(pipe, dep1));
+	pipe.push_async(wait_on_dependency(dep1));
 	pipe.consume_loop([&](cdp::coroutine&& co) {
-		pipe.run_frame(std::move(co));
+		pipe.execute_frame(co, true);
 	});
 }
 
@@ -46,7 +46,7 @@ but you can use multiple threads for this shenanigan:
 ```
 //multiple threads doing this:
 pipe.consume_loop_or_wait([&](cdp::coroutine&& co) {
-	pipe.run_frame(std::move(co));
+	pipe.execute_frame(co, false);
 });
 ```
 
