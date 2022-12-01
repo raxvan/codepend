@@ -17,7 +17,7 @@ namespace cdp
 	struct suspend_data
 	{
 		suspend_context::suspend_operator* func = nullptr;
-		suspend_context* context = nullptr;
+		suspend_context*				   context = nullptr;
 
 		bool run(coroutine& co, coroutine_pipe& pipe, const bool recursive);
 		bool valid() const;
@@ -31,7 +31,6 @@ namespace cdp
 		using handle_type = std::coroutine_handle<coroutine_context>;
 
 	public:
-
 		struct dependency_await : public suspend_context
 		{
 			dependency* awaiting_dependency;
@@ -39,10 +38,11 @@ namespace cdp
 			dependency_await(dependency& d, coroutine_context& coctx);
 
 			bool await_ready();
-			void await_resume(); //the result of await_resume is the result of `co_await EXPR`
+			void await_resume(); // the result of await_resume is the result of `co_await EXPR`
 
 			inline constexpr void await_suspend(handle_type)
-			{}
+			{
+			}
 
 			static bool frame_function(suspend_context&, coroutine&, coroutine_pipe&, const bool recursive);
 		};
@@ -54,17 +54,18 @@ namespace cdp
 			dependency_resolve(dependency& d, coroutine_context& coctx, const uint32_t payload = 0);
 
 			bool await_ready();
-			
+
 			constexpr void await_resume()
-			{}
+			{
+			}
 			constexpr void await_suspend(handle_type)
-			{}
+			{
+			}
 
 			static bool frame_function(suspend_context&, coroutine&, coroutine_pipe&, const bool recursive);
 		};
 
 	public:
-
 		struct coroutine_context
 		{
 		public:
@@ -72,15 +73,15 @@ namespace cdp
 			ttf::instance_counter _refcheck;
 #endif
 		public:
-			int32_t refcount = 1; //1 for when it's created
+			int32_t refcount = 1; // 1 for when it's created
 
-			suspend_data 	frame_function;
-			handle_type 	next;
+			suspend_data frame_function;
+			handle_type	 next;
 
-			cosignal*   	destroy_signal = nullptr;
+			cosignal* destroy_signal = nullptr;
 
 		public:
-			//await modifiers: https://en.cppreference.com/w/cpp/language/coroutines#co_await
+			// await modifiers: https://en.cppreference.com/w/cpp/language/coroutines#co_await
 			inline dependency_await await_transform(dependency& d)
 			{
 				return dependency_await(d, *this);
@@ -88,7 +89,7 @@ namespace cdp
 			inline dependency_await await_transform(dependency* dptr)
 			{
 				CDP_ASSERT(dptr != nullptr);
-				return dependency_await(*dptr, *this);	
+				return dependency_await(*dptr, *this);
 			}
 			inline dependency_resolve yield_value(dependency& d)
 			{
@@ -97,15 +98,14 @@ namespace cdp
 			inline dependency_resolve yield_value(dependency* dptr)
 			{
 				CDP_ASSERT(dptr != nullptr);
-				return dependency_resolve(*dptr, *this);	
+				return dependency_resolve(*dptr, *this);
 			}
 
 		public:
 			coroutine_context() = default;
 			~coroutine_context();
 
-		public: //other 
-
+		public: // other
 			/*template <class ... ARGS>
 			coroutine_context(controller& _c, ARGS ...)
 				:cntrl(&_c)
@@ -127,10 +127,9 @@ namespace cdp
 			}
 			void unhandled_exception()
 			{
-				//exception_ = std::current_exception();
+				// exception_ = std::current_exception();
 			}
 
-			
 			void return_void()
 			{
 			}
@@ -157,27 +156,31 @@ namespace cdp
 				::delete(p);
 			}
 			*/
-
 		};
+
 	public:
 		coroutine() = default;
+
 	public:
-		coroutine& operator = (const coroutine& other);
-		coroutine& operator = (coroutine&& other);
+		coroutine& operator=(const coroutine& other);
+		coroutine& operator=(coroutine&& other);
 		coroutine(coroutine&& other);
 		void swap(coroutine& other);
 		void reset();
-	
+
 	public:
 		coroutine(const coroutine& other);
 		~coroutine();
-		
+
+		coroutine operator+(cosignal& csg) const;
+		coroutine operator+(cosignal* csg) const;
+
 	protected:
 		friend struct coroutine_pipe;
 		friend struct dependency;
 
 		coroutine(const handle_type& ht);
-		void attach(const handle_type& ht);
+		void		attach(const handle_type& ht);
 		handle_type detach();
 
 	public:

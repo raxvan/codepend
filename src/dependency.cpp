@@ -20,18 +20,18 @@ namespace cdp
 		CDP_ASSERT(this->_isresolved_locked() == false && payload != std::numeric_limits<uint32_t>::max());
 		m_payload = payload;
 		auto result = this->waiting_list;
-		this->waiting_list = coroutine::handle_type{};
+		this->waiting_list = coroutine::handle_type {};
 		return result;
 	}
-	bool     dependency::resolved()
+	bool dependency::resolved()
 	{
 		std::lock_guard<threading::spin_lock> _(*this);
 		return _isresolved_locked();
 	}
 
-	bool 	 dependency::_isresolved_locked() const
+	bool dependency::_isresolved_locked() const
 	{
 		return m_payload != std::numeric_limits<uint32_t>::max();
 	}
-	
+
 }

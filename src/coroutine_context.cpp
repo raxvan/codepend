@@ -49,10 +49,10 @@ namespace cdp
 			{
 				auto& p = h.promise();
 				hnext = p.next;
-				p.next = handle_type{};
+				p.next = handle_type {};
 			}
-			
-			if(recursive)
+
+			if (recursive)
 			{
 				coroutine co(h);
 				pipe.execute_frame(co, true);
@@ -61,8 +61,7 @@ namespace cdp
 				pipe.push_async(coroutine(h));
 
 			h = hnext;
-		}
-		while(h);
+		} while (h);
 		return true;
 	}
 
@@ -78,7 +77,7 @@ namespace cdp
 	}
 	coroutine::dependency_await::dependency_await(dependency& d, coroutine_context& coctx)
 	{
-		if(d.resolved() == false)
+		if (d.resolved() == false)
 		{
 			awaiting_dependency = &d;
 
@@ -88,7 +87,7 @@ namespace cdp
 		}
 		else
 		{
-			awaiting_dependency = nullptr;			
+			awaiting_dependency = nullptr;
 		}
 	}
 
@@ -100,12 +99,12 @@ namespace cdp
 		std::lock_guard<threading::spin_lock> _(*aw.awaiting_dependency);
 		if (aw.awaiting_dependency->_isresolved_locked())
 		{
-			//keep executing, the dependency got resolved in the meantime
+			// keep executing, the dependency got resolved in the meantime
 			return true;
 		}
 
 		auto cohandle = co.detach();
-		
+
 		cohandle.promise().next = aw.awaiting_dependency->waiting_list;
 		aw.awaiting_dependency->waiting_list = cohandle;
 
@@ -120,13 +119,13 @@ namespace cdp
 		CDP_ASSERT(refcount == 0);
 	}
 
-	coroutine& coroutine::operator = (const coroutine& other)
+	coroutine& coroutine::operator=(const coroutine& other)
 	{
 		coroutine tmp(other);
 		swap(tmp);
 		return (*this);
 	}
-	coroutine& coroutine::operator = (coroutine&& other)
+	coroutine& coroutine::operator=(coroutine&& other)
 	{
 		coroutine tmp;
 		swap(tmp);
@@ -150,11 +149,23 @@ namespace cdp
 		swap(tmp);
 	}
 
+	coroutine coroutine::operator+(cosignal& csg) const
+	{
+		CDP_ASSERT(handle && handle.promise().destroy_signal == nullptr);
+		handle.promise().destroy_signal = &csg;
+		return (*this);
+	}
+	coroutine coroutine::operator+(cosignal* csg) const
+	{
+		CDP_ASSERT(csg != nullptr);
+		return (*this) + *csg;
+	}
+
 	//--------------------------------------------------------------------------------------------------------------------------------
 	coroutine::handle_type coroutine::detach()
 	{
 		auto r = handle;
-		handle = handle_type{};
+		handle = handle_type {};
 		return r;
 	}
 	void coroutine::attach(const handle_type& ht)
@@ -163,7 +174,7 @@ namespace cdp
 		handle = ht;
 	}
 	coroutine::coroutine(const handle_type& ht)
-		:handle(ht)
+		: handle(ht)
 	{
 		CDP_ASSERT(handle);
 	}
@@ -171,7 +182,7 @@ namespace cdp
 	//--------------------------------------------------------------------------------------------------------------------------------
 
 	coroutine::coroutine(const coroutine& other)
-		:handle(other.handle)
+		: handle(other.handle)
 	{
 		if (handle)
 		{
@@ -180,15 +191,15 @@ namespace cdp
 	}
 	coroutine::~coroutine()
 	{
-		if(handle)
+		if (handle)
 		{
 			auto r = (--handle.promise().refcount);
 			CDP_ASSERT(r >= 0);
-			if(r == 0)
+			if (r == 0)
 			{
 				auto* destroy_signal = handle.promise().destroy_signal;
 				handle.destroy();
-				if(destroy_signal != nullptr)
+				if (destroy_signal != nullptr)
 					destroy_signal->arrive_and_continue();
 			}
 		}

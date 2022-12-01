@@ -26,15 +26,15 @@ namespace cpd
 	extern "C++" void codepend_assert_failed(const char* file, const int line, const char* cond);
 }
 
-#		define CDP_ASSERT(_COND)                                  \
-			do                                                       \
-			{                                                        \
-				if (!(_COND))                                        \
+#		define CDP_ASSERT(_COND)                                       \
+			do                                                          \
+			{                                                           \
+				if (!(_COND))                                           \
 					codepend_assert_failed(__FILE__, __LINE__, #_COND); \
 			} while (false)
-#		define CDP_ASSERT_FALSE(CSTR_MSG)                       \
-			do                                                     \
-			{                                                      \
+#		define CDP_ASSERT_FALSE(CSTR_MSG)                            \
+			do                                                        \
+			{                                                         \
 				codepend_assert_failed(__FILE__, __LINE__, CSTR_MSG); \
 			} while (false)
 #	endif
@@ -46,15 +46,15 @@ namespace cpd
 #ifndef CDP_ASSERT
 
 #	define CDP_ASSERT(...) \
-		do                    \
-		{                     \
+		do                  \
+		{                   \
 		} while (false)
 #endif
 
 #ifndef CDP_ASSERT_FALSE
 #	define CDP_ASSERT_FALSE(...) \
-		do                          \
-		{                           \
+		do                        \
+		{                         \
 			CDP_ASSERT(false);    \
 		} while (false)
 
@@ -63,12 +63,14 @@ namespace cpd
 //--------------------------------------------------------------------------------------------------------------------------------
 
 #include <limits>
+#include <mutex>
+#include <condition_variable>
 #include <coroutine>
 #include <vector>
+
 #include <threading.h>
 
 namespace cdp
 {
 
-	
 }
