@@ -225,8 +225,6 @@ void test_cosginal()
 	cdp::cosignal wait_first;
 	cdp::cosignal wait_second;
 
-	wait_first.reset(50);
-	wait_second.reset(50);
 	for (std::size_t i = 0; i < 100; i++)
 	{
 		if (i % 2 == 0)

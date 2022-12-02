@@ -63,8 +63,6 @@ namespace cdp
 
 			auto ffunc = h.promise().frame_function;
 
-			h.promise().frame_function.reset();
-
 			if (ffunc.run(co, *this, recursive))
 				continue;
 

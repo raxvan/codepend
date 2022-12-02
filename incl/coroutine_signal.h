@@ -12,20 +12,19 @@ namespace cdp
 		~cosignal();
 
 	public:
-		cosignal() = default;
-		cosignal(const uint32_t expected);
-		void reset(const uint32_t expected);
+		cosignal();
+		void reset();
 
 		bool wait(); // returns true if thread waited
 
 	protected:
 		friend struct coroutine;
 
+		void mark();
 		void arrive_and_continue();
 
 	protected:
-		std::atomic<int> m_arrived { 0 };
-		int				 m_expected { 0 };
+		std::atomic<int> m_counter { 1 };
 		bool			 m_waiting = false;
 
 		std::mutex				m_mutex;

@@ -26,14 +26,14 @@ namespace cdp
 		friend struct coroutine_dependency_pool;
 		friend struct coroutine;
 
-		coroutine::handle_type resolve(const uint32_t payload);
+		coroutine::handle_type resolve(const uint32_t payload = 0);
 
 	protected:
 		bool				   _isresolved_locked() const;
 		coroutine::handle_type _resolve_locked(const uint32_t payload);
 
 	protected:
-		coroutine::handle_type waiting_list;
+		coroutine::handle_type 	waiting_list;
 
 		uint32_t m_payload = std::numeric_limits<uint32_t>::max();
 	};

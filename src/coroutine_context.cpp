@@ -23,20 +23,15 @@ namespace cdp
 
 	//--------------------------------------------------------------------------------------------------------------------------------
 
-	coroutine::dependency_resolve::dependency_resolve(dependency& d, coroutine_context& coctx, const uint32_t payload)
+	coroutine::dependency_resolve::dependency_resolve(handle_type colist, coroutine_context& coctx)
 	{
-		resolve_list = d.resolve(payload);
-
+		resolve_list = colist;
 		CDP_ASSERT(coctx.frame_function.valid() == false);
-		coctx.frame_function.func = dependency_resolve::frame_function;
-		coctx.frame_function.context = this;
-	}
-	coroutine::dependency_resolve::dependency_resolve(resolved_dependency_yield d, coroutine_context& coctx)
-	{
-		resolve_list = d.resolve_list;
-		CDP_ASSERT(coctx.frame_function.valid() == false);
-		coctx.frame_function.func = dependency_resolve::frame_function;
-		coctx.frame_function.context = this;
+		if (resolve_list)
+		{
+			coctx.frame_function.func = dependency_resolve::frame_function;
+			coctx.frame_function.context = this;
+		}
 	}
 	bool coroutine::dependency_resolve::await_ready()
 	{
@@ -119,6 +114,21 @@ namespace cdp
 	}
 
 	//--------------------------------------------------------------------------------------------------------------------------------
+
+	coroutine::dependency_resolve coroutine::coroutine_context::yield_value(dependency& d)
+	{
+		return coroutine::dependency_resolve(d.resolve(), *this);
+	}
+	coroutine::dependency_resolve coroutine::coroutine_context::yield_value(dependency* dptr)
+	{
+		CDP_ASSERT(dptr != nullptr);
+		return coroutine::dependency_resolve(dptr->resolve(), *this);
+	}
+	coroutine::dependency_resolve coroutine::coroutine_context::yield_value(resolved_dependency_yield dy)
+	{
+		return coroutine::dependency_resolve(dy.resolve_list, *this);
+	}
+
 	//--------------------------------------------------------------------------------------------------------------------------------
 
 	coroutine::coroutine_context::~coroutine_context()
@@ -159,7 +169,9 @@ namespace cdp
 	coroutine coroutine::operator+(cosignal& csg) const
 	{
 		CDP_ASSERT(handle && handle.promise().destroy_signal == nullptr);
+		csg.mark();
 		handle.promise().destroy_signal = &csg;
+
 		return (*this);
 	}
 	coroutine coroutine::operator+(cosignal* csg) const

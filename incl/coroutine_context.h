@@ -52,15 +52,14 @@ namespace cdp
 
 		struct resolved_dependency_yield
 		{
-			handle_type resolve_list;	
+			handle_type resolve_list;
 		};
 
 		struct dependency_resolve : public suspend_context
 		{
 			handle_type resolve_list;
 
-			dependency_resolve(dependency& d, coroutine_context& coctx, const uint32_t payload = 0);
-			dependency_resolve(resolved_dependency_yield d, coroutine_context& coctx);
+			dependency_resolve(handle_type colist, coroutine_context& coctx);
 
 			bool await_ready();
 
@@ -103,19 +102,9 @@ namespace cdp
 			//template <class T>
 			//dependency_result_await<T> await_transform(result<T>& d);
 
-			inline dependency_resolve yield_value(dependency& d)
-			{
-				return dependency_resolve(d, *this);
-			}
-			inline dependency_resolve yield_value(dependency* dptr)
-			{
-				CDP_ASSERT(dptr != nullptr);
-				return dependency_resolve(*dptr, *this);
-			}
-			inline dependency_resolve yield_value(resolved_dependency_yield di)
-			{
-				return dependency_resolve(di, *this);
-			}
+			dependency_resolve yield_value(dependency& d);
+			dependency_resolve yield_value(dependency* dptr);
+			dependency_resolve yield_value(resolved_dependency_yield dy);
 
 		public:
 			coroutine_context() = default;
