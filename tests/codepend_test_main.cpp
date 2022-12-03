@@ -4,6 +4,16 @@
 #include <iostream>
 #include <chrono>
 
+#include <threading.h>
+
+struct copipe : public cdp::coroutine_pipe, public threading::async_pipe<cdp::coroutine>
+{
+	virtual void push_async(cdp::coroutine&& co) override
+	{
+		threading::async_pipe<cdp::coroutine>::push_back(co);		
+	}
+};
+ 
 void thread_sleep(int ms_time)
 {
 	std::this_thread::sleep_for(std::chrono::milliseconds(ms_time));
@@ -36,7 +46,7 @@ cdp::coroutine wait_on_dependency(cdp::dependency& d)
 
 void basic_coroutine_test()
 {
-	cdp::coroutine_pipe pipe;
+	copipe pipe;
 
 	{
 		cdp::dependency dep1;
@@ -44,11 +54,11 @@ void basic_coroutine_test()
 		pipe.push_async(satisfy_dependncy(dep1));
 		pipe.push_async(wait_on_dependency(dep1));
 		pipe.consume_loop([&](cdp::coroutine&& co) { pipe.execute_frame(co, true); });
-		TEST_ASSERT(pipe.pipe_empty() == true);
+		TEST_ASSERT(pipe.empty() == true);
 
 		{
 			pipe.push_async(hello_world());
-			TEST_ASSERT(pipe.pipe_empty() == false);
+			TEST_ASSERT(pipe.empty() == false);
 			pipe.consume_loop([&](cdp::coroutine&& co) { pipe.execute_frame(co, false); });
 		}
 
@@ -67,7 +77,7 @@ void basic_coroutine_test()
 
 			pipe.resolve_recursive(dep2);
 
-			TEST_ASSERT(pipe.pipe_empty() == true); // because cogen is waiting
+			TEST_ASSERT(pipe.empty() == true); // because cogen is waiting
 		}
 	}
 }
@@ -96,7 +106,7 @@ cdp::coroutine resolving_coroutine(dependency_array& dvec, std::size_t index)
 
 void test_more_coroutines()
 {
-	cdp::coroutine_pipe pipe;
+	copipe pipe;
 
 	std::array<std::thread, 32> threads;
 
@@ -148,7 +158,7 @@ std::size_t& thread_index()
 
 void test_coroutine_dependency()
 {
-	cdp::coroutine_pipe		   pipe;
+	copipe		   pipe;
 	std::array<std::thread, 3> threads;
 
 	std::array<cdp::dependency, 3> thread_dependency;
@@ -179,7 +189,7 @@ void test_coroutine_dependency()
 
 		for (std::size_t i = 0; i < threads.size(); i++)
 		{
-			pipe.push_to(thread_dependency[i], await_for_thread(i));
+			thread_dependency[i].add(await_for_thread(i));
 		}
 
 		l.arrive_and_wait();
@@ -202,7 +212,7 @@ cdp::coroutine wait(const std::size_t index)
 
 void test_cosginal()
 {
-	cdp::coroutine_pipe pipe;
+	copipe pipe;
 
 	std::array<std::thread, 32> threads;
 

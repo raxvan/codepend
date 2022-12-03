@@ -34,32 +34,47 @@ namespace cdp
 		using handle_type = std::coroutine_handle<coroutine_context>;
 
 	public:
-		struct dependency_await : public suspend_context
-		{
-			dependency* awaiting_dependency;
-
-			dependency_await(dependency& d, coroutine_context& coctx);
-
-			bool await_ready();
-			void await_resume(); // the result of await_resume is the result of `co_await EXPR`
-
-			inline constexpr void await_suspend(handle_type)
-			{
-			}
-
-			static bool frame_function(suspend_context&, coroutine&, coroutine_pipe&, const bool recursive);
-		};
-
 		struct resolved_dependency_yield
 		{
 			handle_type resolve_list;
 		};
 
-		struct dependency_resolve : public suspend_context
+		struct dependency_await_base : public suspend_context
+		{
+			dependency* awaiting_dependency;
+
+			bool await_ready();
+
+			inline constexpr void await_suspend(handle_type)
+			{
+			}
+		};
+
+		struct dependency_await : public dependency_await_base
+		{
+			dependency_await(dependency& d, coroutine_context& coctx);
+
+			void await_resume(); // the result of await_resume is the result of `co_await EXPR`
+
+			static bool frame_function(suspend_context&, coroutine&, coroutine_pipe&, const bool recursive);
+		};
+
+		struct dependency_value_await : public dependency_await_base
+		{
+			uint32_t result;
+
+			dependency_value_await(dependency& d, coroutine_context& coctx);
+			
+			uint32_t await_resume(); // the result of await_resume is the result of `co_await EXPR`
+
+			static bool frame_function(suspend_context&, coroutine&, coroutine_pipe&, const bool recursive);
+		};
+
+		struct queue_coroutine_function : public suspend_context
 		{
 			handle_type resolve_list;
 
-			dependency_resolve(handle_type colist, coroutine_context& coctx);
+			queue_coroutine_function(handle_type colist, coroutine_context& coctx);
 
 			bool await_ready();
 
@@ -102,9 +117,9 @@ namespace cdp
 			//template <class T>
 			//dependency_result_await<T> await_transform(result<T>& d);
 
-			dependency_resolve yield_value(dependency& d);
-			dependency_resolve yield_value(dependency* dptr);
-			dependency_resolve yield_value(resolved_dependency_yield dy);
+			queue_coroutine_function yield_value(dependency& d);
+			queue_coroutine_function yield_value(dependency* dptr);
+			queue_coroutine_function yield_value(resolved_dependency_yield dy);
 
 		public:
 			coroutine_context() = default;

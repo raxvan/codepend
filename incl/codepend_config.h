@@ -10,6 +10,10 @@
 #	include <ttf.h>
 #	define CDP_ASSERT TTF_ASSERT
 
+#ifndef CDP_ENABLE_ASSERT
+#define CDP_ENABLE_ASSERT
+#endif
+
 #elif defined(CDP_ENABLE_ASSERT)
 //--------------------------------------------------------------------------------------------------------------------------------
 #	if defined(CDP_WITH_DEV_PLATFORM)
@@ -67,8 +71,6 @@ namespace cpd
 #include <condition_variable>
 #include <coroutine>
 #include <vector>
-
-#include <threading.h>
 
 namespace cdp
 {

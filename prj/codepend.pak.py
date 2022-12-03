@@ -4,8 +4,6 @@ def configure(cfg):
 	cfg.link_if_enabled("../../ttf/testing.pak.py")
 	cfg.link_if_present("../../dev-platform/prj/dev-platform.pak.py")
 
-	cfg.link("../../threading/prj/threading.pak.py")
-
 def construct(ctx):
 	
 	ctx.config("type","lib")

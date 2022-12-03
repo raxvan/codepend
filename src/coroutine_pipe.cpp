@@ -7,28 +7,6 @@ namespace cdp
 
 	coroutine_pipe::~coroutine_pipe()
 	{
-		CDP_ASSERT(pipe_empty() == true);
-	}
-
-	bool coroutine_pipe::pipe_empty()
-	{
-		return threading::async_pipe<coroutine>::empty();
-	}
-
-	void coroutine_pipe::push_async(coroutine&& co)
-	{
-		threading::async_pipe<coroutine>::push_back(std::move(co));
-	}
-
-	void coroutine_pipe::push_to(dependency& dep, coroutine&& co)
-	{
-		std::lock_guard<threading::spin_lock> _(dep);
-		CDP_ASSERT(dep._isresolved_locked() == false); // unresolved
-
-		auto cohandle = co.detach();
-
-		cohandle.promise().next = dep.waiting_list;
-		dep.waiting_list = cohandle;
 	}
 
 	void coroutine_pipe::resolve_recursive(dependency& d, const uint32_t payload)
