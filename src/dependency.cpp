@@ -85,6 +85,31 @@ namespace cdp
 		}
 	}
 
+	void dependency::reset()
+	{
+		while(true)
+		{
+			uint32_t pr = resolve_state.exchange(_locked_value(), std::memory_order_acquire);
+
+			if(pr != _locked_value())
+			{
+				//already unresolved, do nothing
+				break;
+			}
+
+			while(true)
+			{
+				if (pr == _locked_value())
+					pr = resolve_state.load(std::memory_order_relaxed);
+				else
+					break;
+			}
+		}
+
+		CDP_ASSERT(waiting_list == coroutine::handle_type{});//must have no attached 
+		resolve_state.exchange(_unresolved_value(), std::memory_order_release);
+	}
+
 	bool dependency::_isresolved()
 	{
 		while(true)

@@ -16,7 +16,7 @@ namespace cdp
 	void cosignal::reset()
 	{
 		std::unique_lock<std::mutex> _(m_mutex);
-		CDP_ASSERT(m_counter == 0 && m_waiting == false);
+		CDP_ASSERT(m_counter == 0 || m_counter == 1 && m_waiting == false);
 		m_counter.store(1);
 	}
 

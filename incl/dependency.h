@@ -24,6 +24,8 @@ namespace cdp
 		coroutine::handle_type resolve(const uint32_t payload = 0);
 
 		uint32_t get();
+
+		void reset();
 	protected:
 		friend struct coroutine_pipe;
 		friend struct coroutine_dependency_pool;
