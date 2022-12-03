@@ -50,6 +50,13 @@ namespace cdp
 		T value;
 
 	public:
+		result() = default;
+		template <std::convertible_to<T> From>
+		result(From&& v)
+			:value(std::forward<From>(v))
+		{
+		}
+	public:
 		template <std::convertible_to<T> From>
 		inline coroutine::resolved_dependency_colist_value<T> operator = (From&& v)
 		{
