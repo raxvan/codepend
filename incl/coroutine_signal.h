@@ -15,12 +15,11 @@ namespace cdp
 		cosignal();
 		void reset();
 
+	public:
 		bool wait(); // returns true if thread waited
 
-	protected:
-		friend struct coroutine;
-
-		void mark();
+	public:
+		void add_to_arrivals();
 		void arrive_and_continue();
 
 	protected:

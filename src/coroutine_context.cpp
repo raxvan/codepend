@@ -223,7 +223,7 @@ namespace cdp
 	coroutine coroutine::operator+(cosignal& csg) const
 	{
 		CDP_ASSERT(handle && handle.promise().destroy_signal == nullptr);
-		csg.mark();
+		csg.add_to_arrivals();
 		handle.promise().destroy_signal = &csg;
 
 		return (*this);

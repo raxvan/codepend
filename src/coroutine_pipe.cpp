@@ -26,6 +26,23 @@ namespace cdp
 		}
 	}
 
+	void coroutine_pipe::resolve(dependency& d, const uint32_t payload)
+	{
+		auto h = d.resolve(payload);
+		while (h)
+		{
+			coroutine::handle_type hnext;
+			{
+				auto& p = h.promise();
+				hnext = p.next;
+				p.next = coroutine::handle_type {};
+			}
+			coroutine co(h);
+			this->push_async(std::move(co));
+			h = hnext;
+		}
+	}
+
 	bool coroutine_pipe::execute_frame(coroutine& co, const bool recursive)
 	{
 		auto h = co.handle;

@@ -18,6 +18,18 @@ namespace cdp
 
 	dependency::~dependency()
 	{
+#ifdef CDP_TESTING
+		uint32_t t;
+		if(_lock_for_await(t))
+		{
+			CDP_ASSERT(waiting_list == coroutine::handle_type{});
+			_unlock_unresolved();
+		}
+		else
+		{
+			CDP_ASSERT(t !=  _unresolved_value() && t != _locked_value());
+		}
+#endif
 	}
 
 	void dependency::add(coroutine&& co)
@@ -65,7 +77,7 @@ namespace cdp
 	{
 		while(true)
 		{
-			uint32_t r = resolve_state.load();
+			uint32_t r = resolve_state.load(std::memory_order_relaxed);
 			if(r == _locked_value())
 				continue;
 			CDP_ASSERT(r != _unresolved_value());
