@@ -50,30 +50,65 @@ namespace cdp
 		T value;
 
 	public:
-		inline coroutine::resolved_dependency_yield operator = (const T& v)
+		template <std::convertible_to<T> From>
+		inline coroutine::resolved_dependency_colist_value<T> operator = (From&& v)
 		{
 			_lock_for_resolve();
 			auto rl = _detach();
-			value = v;
+			value = std::forward<From>(v);
 			_resolve(0);
-			return { rl };
+			return { rl , &value };
 		}
-		inline coroutine::resolved_dependency_yield operator = (T&& v)
+	};
+
+	template <>
+	struct result <uint32_t> : public dependency
+	{
+	public:
+		inline coroutine::resolved_dependency_colist operator = (const uint32_t& v)
 		{
 			_lock_for_resolve();
 			auto rl = _detach();
-			value = std::move(v);
-			_resolve(0);
+			_resolve(v);
 			return { rl };
 		}
 	};
 
 	//--------------------------------------------------------------------------------------------------------------------------------
 
-	/*template <class T>
-	inline coroutine::dependency_await coroutine::coroutine_context::await_transform(result<T>& d)
+	inline coroutine::await_on_dependency_value coroutine::coroutine_context::await_transform(result<uint32_t>& d)
 	{
+		return coroutine::await_on_dependency_value(d, *this);
+	}
+	inline coroutine::await_on_dependency_value coroutine::coroutine_context::await_transform(result<uint32_t>* dptr)
+	{
+		CDP_ASSERT(dptr != nullptr);
+		return coroutine::await_on_dependency_value(*dptr, *this);
+	}
 
-	}*/
+	template <class T>
+	inline coroutine::await_on_dependency_result<T> coroutine::coroutine_context::await_transform(result<T>& d)
+	{
+		return coroutine::await_on_dependency_result<T>(d, *this, &d.value);
+	}
+	template <class T>
+	inline coroutine::await_on_dependency_result<T> coroutine::coroutine_context::await_transform(result<T>* dptr)
+	{
+		CDP_ASSERT(dptr != nullptr);
+		return coroutine::await_on_dependency_result<T>(*dptr, *this, &dptr->value);
+	}
 
+	template <class T>
+	const T& coroutine::await_on_dependency_result<T>::await_resume()
+	{
+#ifdef CDP_ENABLE_ASSERT
+		if(dependency_ptr != nullptr)
+		{
+			uint32_t tmp;
+			CDP_ASSERT(dependency_ptr->resolved(tmp) == true);
+		}
+#endif
+		CDP_ASSERT(value_ptr != nullptr);
+		return *value_ptr;
+	}
 }

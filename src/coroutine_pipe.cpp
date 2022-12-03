@@ -44,7 +44,7 @@ namespace cdp
 			if (ffunc.run(co, *this, recursive))
 				continue;
 
-			CDP_ASSERT(!co.handle);
+			CDP_ASSERT(!co.handle); //it must be detached
 
 			return false;
 		}

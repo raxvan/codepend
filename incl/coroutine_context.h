@@ -34,14 +34,21 @@ namespace cdp
 		using handle_type = std::coroutine_handle<coroutine_context>;
 
 	public:
-		struct resolved_dependency_yield
+		struct resolved_dependency_colist
 		{
 			handle_type resolve_list;
 		};
 
-		struct dependency_await_base : public suspend_context
+		template <class T>
+		struct resolved_dependency_colist_value
 		{
-			dependency* awaiting_dependency;
+			handle_type resolve_list;
+			const T* value_ptr;
+		};
+
+		struct await_on_dependency_impl : public suspend_context
+		{
+			dependency* dependency_ptr;
 
 			bool await_ready();
 
@@ -50,42 +57,81 @@ namespace cdp
 			}
 		};
 
-		struct dependency_await : public dependency_await_base
+
+		struct await_on_resolve_impl : public suspend_context
 		{
-			dependency_await(dependency& d, coroutine_context& coctx);
+			handle_type resolve_list;
 
-			void await_resume(); // the result of await_resume is the result of `co_await EXPR`
+			bool await_ready();
 
-			static bool frame_function(suspend_context&, coroutine&, coroutine_pipe&, const bool recursive);
+			inline constexpr void await_suspend(handle_type)
+			{
+			}
 		};
 
-		struct dependency_value_await : public dependency_await_base
+		struct await_on_dependency_base : public await_on_dependency_impl
+		{
+			await_on_dependency_base(dependency& d, coroutine_context& coctx);
+			static bool frame_function(suspend_context&, coroutine&, coroutine_pipe&, const bool recursive);
+		};
+		struct await_on_dependency : public await_on_dependency_base
+		{
+			inline await_on_dependency(dependency& d, coroutine_context& coctx)
+				:await_on_dependency_base(d, coctx)
+			{
+			}
+
+			void await_resume(); // the result of await_resume is the result of `co_await EXPR`
+		};
+
+		struct await_on_dependency_value : public await_on_dependency_impl
 		{
 			uint32_t result;
 
-			dependency_value_await(dependency& d, coroutine_context& coctx);
+			await_on_dependency_value(dependency& d, coroutine_context& coctx);
 			
 			uint32_t await_resume(); // the result of await_resume is the result of `co_await EXPR`
 
 			static bool frame_function(suspend_context&, coroutine&, coroutine_pipe&, const bool recursive);
 		};
 
-		struct queue_coroutine_function : public suspend_context
+		template<class T>
+		struct await_on_dependency_result : public await_on_dependency_base
 		{
-			handle_type resolve_list;
+			const T* value_ptr;
 
-			queue_coroutine_function(handle_type colist, coroutine_context& coctx);
+			inline const T& await_resume();
 
-			bool await_ready();
+			inline await_on_dependency_result(dependency& d, coroutine_context& coctx, const T* _value_ptr)
+				:await_on_dependency_base(d, coctx)
+				,value_ptr(_value_ptr)
+			{
+			}
+		};
+
+		struct await_on_resolve : public await_on_resolve_impl
+		{
+			await_on_resolve(handle_type colist, coroutine_context& coctx);
 
 			constexpr void await_resume()
 			{
 			}
-			constexpr void await_suspend(handle_type)
-			{
-			}
-
 			static bool frame_function(suspend_context&, coroutine&, coroutine_pipe&, const bool recursive);
+		};
+
+		template<class T>
+		struct await_on_resolve_value : public await_on_resolve
+		{
+			const T* value_ptr;
+			inline await_on_resolve_value(handle_type colist, coroutine_context& coctx, const T* _value_ptr)
+				:await_on_resolve(colist,coctx)
+				,value_ptr(_value_ptr)
+			{}
+			inline const T& await_resume()
+			{
+				CDP_ASSERT(value_ptr != nullptr);
+				return *value_ptr;
+			}
 		};
 
 	public:
@@ -105,21 +151,33 @@ namespace cdp
 
 		public:
 			// await modifiers: https://en.cppreference.com/w/cpp/language/coroutines#co_await
-			inline dependency_await await_transform(dependency& d)
+			inline await_on_dependency await_transform(dependency& d)
 			{
-				return dependency_await(d, *this);
+				return await_on_dependency(d, *this);
 			}
-			inline dependency_await await_transform(dependency* dptr)
+			inline await_on_dependency await_transform(dependency* dptr)
 			{
 				CDP_ASSERT(dptr != nullptr);
-				return dependency_await(*dptr, *this);
+				return await_on_dependency(*dptr, *this);
 			}
-			//template <class T>
-			//dependency_result_await<T> await_transform(result<T>& d);
+			inline await_on_dependency_value await_transform(result<uint32_t>& d);
+			inline await_on_dependency_value await_transform(result<uint32_t>* dptr);
+			template <class T>
+			inline await_on_dependency_result<T> await_transform(result<T>& dptr);
+			template <class T>
+			inline await_on_dependency_result<T> await_transform(result<T>* dptr);
+			
 
-			queue_coroutine_function yield_value(dependency& d);
-			queue_coroutine_function yield_value(dependency* dptr);
-			queue_coroutine_function yield_value(resolved_dependency_yield dy);
+			await_on_resolve yield_value(dependency& d);
+			await_on_resolve yield_value(dependency* dptr);
+			await_on_resolve yield_value(resolved_dependency_colist dy);
+
+			template <class T>
+			inline coroutine::await_on_resolve_value<T> yield_value(resolved_dependency_colist_value<T> dy)
+			{
+				return coroutine::await_on_resolve_value<T>(dy.resolve_list, *this, dy.value_ptr);
+			}
+
 
 		public:
 			coroutine_context() = default;

@@ -251,11 +251,68 @@ void test_cosginal()
 		threads[i].join();
 }
 
+
+cdp::coroutine setter(cdp::result<uint32_t>& one, cdp::result<uint32_t>& two, cdp::result<uint32_t>& three)
+{
+	co_yield one = 1;
+	co_yield two = 2;
+	co_yield three = 3;
+}
+
+cdp::coroutine getter(cdp::result<uint32_t>& d, const uint32_t expected)
+{
+	uint32_t v = co_await d;
+	TEST_ASSERT(v == expected);
+}
+void test_dependency_value()
+{
+	copipe pipe;
+
+	cdp::result<uint32_t> one;
+	cdp::result<uint32_t> two;
+	cdp::result<uint32_t> three;
+
+	pipe.push_async(setter(one,two,three));
+	pipe.push_async(getter(one,1));
+	pipe.push_async(getter(two,2));
+	pipe.push_async(getter(three,3));
+
+	pipe.consume_loop([&](cdp::coroutine&& co) { pipe.execute_frame(co, true); });
+}
+
+
+cdp::coroutine string_setter(cdp::result<std::string>& h, cdp::result<std::string>& w)
+{
+	std::cout << co_yield h = "hello ";
+	co_yield w = "world\n";
+}
+cdp::coroutine writer(cdp::result<std::string>& d)
+{
+	std::cout << co_await d;
+}
+
+void test_string_value()
+{
+	copipe pipe;
+
+	cdp::result<std::string> h;
+	cdp::result<std::string> w;
+
+	pipe.push_async(string_setter(h, w));
+	pipe.push_async(writer(h));
+	
+
+	pipe.consume_loop([&](cdp::coroutine&& co) { pipe.execute_frame(co, true); });
+}
+
 void test_main()
 {
 	TEST_FUNCTION(test_coroutine_dependency);
 	TEST_FUNCTION(basic_coroutine_test);
 	TEST_FUNCTION(test_more_coroutines);
 	TEST_FUNCTION(test_cosginal);
+	TEST_FUNCTION(test_dependency_value);
+	TEST_FUNCTION(test_string_value);
+	
 }
 TEST_MAIN(test_main)
