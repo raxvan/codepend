@@ -37,10 +37,13 @@ namespace cdp
 		{
 			await_coroutine_generator<F>& self = static_cast<await_coroutine_generator<F>&>(sc);
 			auto new_coroutine = self.func();
-			if (recursive)
-				pipe.execute_frame(new_coroutine, true);
-			else
-				pipe.push_async(std::move(new_coroutine));
+			if(new_coroutine.handle)
+			{
+				if (recursive)
+					pipe.execute_frame(new_coroutine, true);
+				else
+					pipe.push_async(std::move(new_coroutine));
+			}
 
 			return true;
 		};

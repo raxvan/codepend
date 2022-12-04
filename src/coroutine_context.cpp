@@ -64,7 +64,9 @@ namespace cdp
 				pipe.execute_frame(co, true);
 			}
 			else
+			{
 				pipe.push_async(coroutine(h));
+			}
 
 			h = hnext;
 		} while (h);
