@@ -59,6 +59,11 @@ namespace cdp
 	public:
 		~frame() = default;
 		frame() = default;
+
+		inline void add(coroutine&& co)
+		{
+			frame_state.add(std::move(co));
+		}
 	protected:
 		dependency frame_state;
 	protected:
