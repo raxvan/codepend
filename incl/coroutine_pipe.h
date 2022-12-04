@@ -22,6 +22,11 @@ namespace cdp
 	public:
 		virtual void push_async(coroutine&& co) = 0;
 
+	protected:
+		friend struct coroutine;
+		void _push_list_in_queue(coroutine::handle_type h);
+		void _execute_list_in_frame(coroutine::handle_type h, const bool recursive);
+
 	public:
 		~coroutine_pipe();
 	};
@@ -30,22 +35,13 @@ namespace cdp
 	//--------------------------------------------------------------------------------------------------------------------------------
 
 	template <class F>
-	inline coroutine::await_coroutine_generator<F>::await_coroutine_generator(F&& _func, coroutine_context& coctx)
+	inline coroutine::await_on_frame_function<F>::await_on_frame_function(F&& _func, coroutine_context& coctx)
 		:func(std::move(_func))
 	{
-		auto frame_function = [](suspend_context& sc, coroutine&, coroutine_pipe& pipe, const bool recursive) -> bool
+		auto frame_function = [](suspend_context& sc, coroutine& co, coroutine_pipe& pipe, const bool recursive) -> bool
 		{
-			await_coroutine_generator<F>& self = static_cast<await_coroutine_generator<F>&>(sc);
-			auto new_coroutine = self.func();
-			if(new_coroutine.handle)
-			{
-				if (recursive)
-					pipe.execute_frame(new_coroutine, true);
-				else
-					pipe.push_async(std::move(new_coroutine));
-			}
-
-			return true;
+			await_on_frame_function<F>& self = static_cast<await_on_frame_function<F>&>(sc);
+			return self.func(co, pipe, recursive);
 		};
 
 		coctx.frame_function.func = frame_function;

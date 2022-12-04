@@ -156,10 +156,10 @@ namespace cdp
 
 		template <class F>
 		//func: coroutine F()
-		struct await_coroutine_generator : public suspend_context
+		struct await_on_frame_function : public suspend_context
 		{
 			F func;
-			inline await_coroutine_generator(F&& _func, coroutine_context& coctx);
+			inline await_on_frame_function(F&& _func, coroutine_context& coctx);
 
 			inline constexpr bool await_ready()
 			{
@@ -175,28 +175,29 @@ namespace cdp
 		};
 
 		template <class F>
-		//func: coroutine F()
-		struct yield_coroutine_generator
+		//func: bool F(coroutine& co, coroutine_pipe& pipe, const bool recursive)
+		struct yield_frame_function
 		{
 			F func;
-			using class_t = yield_coroutine_generator<F>;
+			using class_t = yield_frame_function<F>;
 
-			inline yield_coroutine_generator(F&& _func)
+			inline yield_frame_function(F&& _func)
 				:func(std::move(_func))
 			{}
-			inline yield_coroutine_generator(class_t&& other)
+			inline yield_frame_function(class_t&& other)
 				:func(std::move(other.func))
 			{}
 			
-			yield_coroutine_generator(const class_t& ) = delete;
+			yield_frame_function(const class_t& ) = delete;
 			class_t& operator = (class_t&& other) = delete;
 			class_t& operator = (const class_t& ) = delete;
 		};
 
 		template <class F>
-		static yield_coroutine_generator<F> generate(F&& _func)
+		//bool F(coroutine& co, coroutine_pipe& pipe, const bool recursive)
+		static yield_frame_function<F> frame_function(F&& _func)
 		{
-			return yield_coroutine_generator<F>(std::move(_func));
+			return yield_frame_function<F>(std::move(_func));
 		}
 
 	public:
@@ -210,7 +211,8 @@ namespace cdp
 			int32_t refcount = 1; // 1 for when it's created
 
 			suspend_data frame_function;
-			handle_type	 next;
+			handle_type	 next_parallel; //on dependency
+			handle_type	 next_sequential; //on dependency
 
 			cosignal* destroy_signal = nullptr;
 
@@ -254,15 +256,21 @@ namespace cdp
 			}
 
 			template <class F>
-			inline await_coroutine_generator<F> yield_value(yield_coroutine_generator<F> yv)
+			inline await_on_frame_function<F> yield_value(yield_frame_function<F> yv)
 			{
-				return await_coroutine_generator<F>(std::move(yv.func), *this);
+				return await_on_frame_function<F>(std::move(yv.func), *this);
 			}
 
 
 		public:
 			coroutine_context() = default;
 			~coroutine_context();
+
+			handle_type detach_parallel();
+			handle_type detach_sequential();
+
+			void add_parallel(coroutine::handle_type h);
+			void add_sequential(coroutine::handle_type h);
 
 		public: // other
 			/*template <class ... ARGS>
@@ -301,6 +309,15 @@ namespace cdp
 			}
 			*/
 
+			static void* operator new(size_t size)
+			{
+				return ::operator new(size);
+			}
+			static void operator delete(void* p)
+			{
+				::delete(p);
+			}
+
 			/*
 			template <class ... ARGS>
 			static void* operator new(size_t size, controller&, ARGS ...)
@@ -333,9 +350,7 @@ namespace cdp
 		coroutine operator+(cosignal& csg) const;
 		coroutine operator+(cosignal* csg) const;
 
-	protected:
-		friend struct coroutine_pipe;
-		friend struct dependency;
+	public:
 
 		coroutine(const handle_type& ht);
 		void		attach(const handle_type& ht);

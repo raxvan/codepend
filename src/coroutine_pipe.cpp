@@ -9,57 +9,21 @@ namespace cdp
 	{
 	}
 
-	inline coroutine::handle_type pop_next(coroutine::handle_type h)
+	void coroutine_pipe::_execute_list_in_frame(coroutine::handle_type h, const bool recursive)
 	{
-		coroutine::handle_type hnext;
-		{
-			auto& p = h.promise();
-			hnext = p.next;
-			p.next = coroutine::handle_type {};
-		}
-		return hnext;
-	}
-
-	void coroutine_pipe::execute_in_frame(frame& f, const bool recursive)
-	{
-		auto h = f.frame_state.detach();
 		while (h)
 		{
-			coroutine::handle_type hnext = pop_next(h);
+			coroutine::handle_type hnext = h.promise().detach_parallel();
 			coroutine co(h);
 			this->execute_frame(co, recursive);
 			h = hnext;
 		}
 	}
-	void coroutine_pipe::execute_in_queue(frame& f)
+	void coroutine_pipe::_push_list_in_queue(coroutine::handle_type h)
 	{
-		auto h = f.frame_state.detach();
 		while (h)
 		{
-			coroutine::handle_type hnext = pop_next(h);
-			coroutine co(h);
-			this->push_async(std::move(co));
-			h = hnext;
-		}
-	}
-
-	void coroutine_pipe::resolve_in_frame(dependency& d, const uint32_t payload, const bool recursive)
-	{
-		auto h = d.resolve(payload);
-		while (h)
-		{
-			coroutine::handle_type hnext = pop_next(h);
-			coroutine co(h);
-			this->execute_frame(co, recursive);
-			h = hnext;
-		}
-	}
-	void coroutine_pipe::resolve_in_queue(dependency& d, const uint32_t payload)
-	{
-		auto h = d.resolve(payload);
-		while (h)
-		{
-			coroutine::handle_type hnext = pop_next(h);
+			coroutine::handle_type hnext = h.promise().detach_parallel();
 			coroutine co(h);
 			this->push_async(std::move(co));
 			h = hnext;
@@ -75,6 +39,18 @@ namespace cdp
 
 			if (h.done())
 			{
+				{
+					auto hn = co.handle.promise().detach_sequential();
+					if(hn)
+					{
+						coroutine nextco(hn);
+						if(recursive)
+							this->execute_frame(nextco, true);
+						else
+							this->push_async(std::move(nextco));
+					}
+				}
+
 				co.reset();
 				return true;
 			}
@@ -88,6 +64,23 @@ namespace cdp
 
 			return false;
 		}
+	}
+
+	void coroutine_pipe::execute_in_frame(frame& f, const bool recursive)
+	{
+		_execute_list_in_frame(f.frame_state.detach(), recursive);
+	}
+	void coroutine_pipe::execute_in_queue(frame& f)
+	{
+		_push_list_in_queue(f.frame_state.detach());
+	}
+	void coroutine_pipe::resolve_in_frame(dependency& d, const uint32_t payload, const bool recursive)
+	{
+		_execute_list_in_frame(d.resolve(payload), recursive);
+	}
+	void coroutine_pipe::resolve_in_queue(dependency& d, const uint32_t payload)
+	{
+		_push_list_in_queue(d.resolve(payload));
 	}
 
 }

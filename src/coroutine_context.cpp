@@ -47,29 +47,12 @@ namespace cdp
 	{
 		await_on_resolve& dr = static_cast<await_on_resolve&>(sc);
 		CDP_ASSERT(dr.resolve_list);
-
-		auto h = dr.resolve_list;
-		do
-		{
-			handle_type hnext;
-			{
-				auto& p = h.promise();
-				hnext = p.next;
-				p.next = handle_type {};
-			}
-
-			if (recursive)
-			{
-				coroutine co(h);
-				pipe.execute_frame(co, true);
-			}
-			else
-			{
-				pipe.push_async(coroutine(h));
-			}
-
-			h = hnext;
-		} while (h);
+		
+		if(recursive)
+			pipe._execute_list_in_frame(dr.resolve_list, true);
+		else
+			pipe._push_list_in_queue(dr.resolve_list);
+		
 		return true;
 	}
 
@@ -212,8 +195,36 @@ namespace cdp
 
 	coroutine::coroutine_context::~coroutine_context()
 	{
-		CDP_ASSERT(refcount == 0);
+		CDP_ASSERT(refcount == 0 && next_parallel == handle_type{} && next_sequential == handle_type{});
 	}
+
+	coroutine::handle_type coroutine::coroutine_context::detach_parallel()
+	{
+		auto r = next_parallel;
+		next_parallel = handle_type{};
+		return r;
+	}
+	void coroutine::coroutine_context::add_parallel(coroutine::handle_type h)
+	{
+		CDP_ASSERT(h.promise().next_parallel == handle_type{});
+		h.promise().next_parallel = next_parallel;
+		next_parallel = h;
+	}
+
+	coroutine::handle_type coroutine::coroutine_context::detach_sequential()
+	{
+		auto r = next_sequential;
+		next_sequential = handle_type{};
+		return r;
+	}
+	void coroutine::coroutine_context::add_sequential(coroutine::handle_type h)
+	{
+		CDP_ASSERT(h.promise().next_sequential == handle_type{});
+		h.promise().next_sequential = next_sequential;
+		next_sequential = h;
+	}
+
+	//--------------------------------------------------------------------------------------------------------------------------------
 
 	coroutine& coroutine::operator=(const coroutine& other)
 	{

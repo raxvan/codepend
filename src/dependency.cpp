@@ -138,7 +138,8 @@ namespace cdp
 
 	void dependency::_attach(coroutine::handle_type h)
 	{
-		h.promise().next = this->waiting_list;
+		CDP_ASSERT(h.promise().next_parallel == coroutine::handle_type{});
+		h.promise().next_parallel = this->waiting_list;
 		this->waiting_list = h;
 	}
 

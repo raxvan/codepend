@@ -406,10 +406,12 @@ void test_coroutine_generator()
 
 		for (std::size_t i = 0; i < 10; i++)
 		{
-			auto g = [&]() -> cdp::coroutine {
-				return accumulator(out);
+			auto g = [&](cdp::coroutine& co, cdp::coroutine_pipe& , const bool ) -> bool {
+				auto acc = accumulator(out);
+				co.handle.promise().add_sequential(acc.detach());
+				return true;
 			};
-			co_yield cdp::coroutine::generate(std::move(g));
+			co_yield cdp::coroutine::frame_function(std::move(g));
 		}
 
 		co_return;
