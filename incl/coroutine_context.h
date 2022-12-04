@@ -59,7 +59,6 @@ namespace cdp
 			}
 		};
 
-
 		struct await_on_resolve_impl : public suspend_context
 		{
 			handle_type resolve_list;
@@ -155,6 +154,51 @@ namespace cdp
 			}
 		};
 
+		template <class F>
+		//func: coroutine F()
+		struct await_coroutine_generator : public suspend_context
+		{
+			F func;
+			inline await_coroutine_generator(F&& _func, coroutine_context& coctx);
+
+			inline constexpr bool await_ready()
+			{
+				return false;
+			}
+			inline constexpr void await_suspend(handle_type)
+			{
+			}
+			inline constexpr void await_resume()
+			{
+			}
+			//static bool frame_function(suspend_context&, coroutine&, coroutine_pipe&, const bool recursive);
+		};
+
+		template <class F>
+		//func: coroutine F()
+		struct yield_coroutine_generator
+		{
+			F func;
+			using class_t = yield_coroutine_generator<F>;
+
+			inline yield_coroutine_generator(F&& _func)
+				:func(std::move(_func))
+			{}
+			inline yield_coroutine_generator(class_t&& other)
+				:func(std::move(other.func))
+			{}
+			
+			yield_coroutine_generator(const class_t& ) = delete;
+			class_t& operator = (class_t&& other) = delete;
+			class_t& operator = (const class_t& ) = delete;
+		};
+
+		template <class F>
+		static yield_coroutine_generator<F> generate(F&& _func)
+		{
+			return yield_coroutine_generator<F>(std::move(_func));
+		}
+
 	public:
 		struct coroutine_context
 		{
@@ -204,9 +248,15 @@ namespace cdp
 			await_on_resolve yield_value(resolved_dependency_colist dy);
 
 			template <class T>
-			inline coroutine::await_on_resolve_value<T> yield_value(resolved_dependency_colist_value<T> dy)
+			inline await_on_resolve_value<T> yield_value(resolved_dependency_colist_value<T> dy)
 			{
-				return coroutine::await_on_resolve_value<T>(dy.resolve_list, *this, dy.value_ptr);
+				return await_on_resolve_value<T>(dy.resolve_list, *this, dy.value_ptr);
+			}
+
+			template <class F>
+			inline await_coroutine_generator<F> yield_value(yield_coroutine_generator<F> yv)
+			{
+				return await_coroutine_generator<F>(std::move(yv.func), *this);
 			}
 
 
@@ -223,8 +273,7 @@ namespace cdp
 
 			coroutine get_return_object()
 			{
-				auto h = handle_type::from_promise(*this);
-				return coroutine(std::move(h));
+				return coroutine(handle_type::from_promise(*this));
 			}
 			std::suspend_always initial_suspend()
 			{
@@ -236,7 +285,7 @@ namespace cdp
 			}
 			void unhandled_exception()
 			{
-				// exception_ = std::current_exception();
+				// std::current_exception();
 			}
 
 			void return_void()

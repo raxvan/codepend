@@ -388,6 +388,40 @@ void test_frames()
 
 }
 
+//--------------------------------------------------------------------------------------------------------------------------------
+
+cdp::coroutine accumulator(std::size_t & out)
+{
+	out ++;
+	co_return;
+};
+
+void test_coroutine_generator()
+{
+	copipe pipe;
+
+	std::size_t counter = 0;
+
+	auto main_coroutine = [](std::size_t& out) -> cdp::coroutine {
+
+		for (std::size_t i = 0; i < 10; i++)
+		{
+			auto g = [&]() -> cdp::coroutine {
+				return accumulator(out);
+			};
+			co_yield cdp::coroutine::generate(std::move(g));
+		}
+
+		co_return;
+	};
+
+	pipe.push_async(main_coroutine(counter));
+	pipe.consume_loop([&](cdp::coroutine&& co) { pipe.execute_frame(co, true); });
+
+	TEST_ASSERT(counter == 10);
+
+}
+
 void test_main()
 {
 	TEST_FUNCTION(test_coroutine_dependency);
@@ -397,6 +431,8 @@ void test_main()
 	TEST_FUNCTION(test_dependency_value);
 	TEST_FUNCTION(test_string_value);
 	TEST_FUNCTION(test_frames);
+	TEST_FUNCTION(test_coroutine_generator);
+	
 	
 }
 TEST_MAIN(test_main)
