@@ -13,35 +13,59 @@ namespace cdp
 		~dependency();
 		dependency() = default;
 
+	public:
 		dependency(const dependency&) = delete;
 		dependency(dependency&&) = delete;
 		dependency& operator=(const dependency&) = delete;
 		dependency& operator=(dependency&&) = delete;
 
+	public:
 		bool resolved(uint32_t& out);
 		bool resolved();
+
 		void add(coroutine&& co); //add awaiting coroutine on this dependency
+		
 		coroutine::handle_type resolve(const uint32_t payload = 0);
+		coroutine::handle_type detach();//must be unresolved, detaches all coroutines waiting on this
 
-		uint32_t get();
+	public:
+		uint32_t get();//must be resolved
 
-		void reset();
+		void reset();//must be resolved, changes state to unresolved
 	protected:
 		friend struct coroutine_pipe;
-		friend struct coroutine_dependency_pool;
 		friend struct coroutine;
 
 		void _lock_for_resolve();
-		void _resolve(const uint32_t p);
 		bool _lock_for_await(uint32_t& out);
+
+		void _unlock_resolve(const uint32_t p);
 		void _unlock_unresolved();
-		coroutine::handle_type _detach();
-		void _attach(coroutine::handle_type h);
+
 		bool _isresolved();
+
+		void _attach(coroutine::handle_type h);
+		coroutine::handle_type _detach();
+		
 	protected:
 		std::atomic<uint32_t> 	resolve_state{ std::numeric_limits<uint32_t>::max() };
 		coroutine::handle_type 	waiting_list;
 	};
+
+	//--------------------------------------------------------------------------------------------------------------------------------
+
+	struct frame
+	{
+	public:
+		~frame() = default;
+		frame() = default;
+	protected:
+		dependency frame_state;
+	protected:
+		friend struct coroutine_pipe;
+		friend struct coroutine;
+	};
+	
 
 	//--------------------------------------------------------------------------------------------------------------------------------
 
@@ -65,7 +89,7 @@ namespace cdp
 			_lock_for_resolve();
 			auto rl = _detach();
 			value = std::forward<From>(v);
-			_resolve(0);
+			_unlock_resolve(0);
 			return { rl , &value };
 		}
 	};
@@ -78,11 +102,12 @@ namespace cdp
 		{
 			_lock_for_resolve();
 			auto rl = _detach();
-			_resolve(v);
+			_unlock_resolve(v);
 			return { rl };
 		}
 	};
 
+	//--------------------------------------------------------------------------------------------------------------------------------
 	//--------------------------------------------------------------------------------------------------------------------------------
 
 	inline coroutine::await_on_dependency_value coroutine::coroutine_context::await_transform(result<uint32_t>& d)

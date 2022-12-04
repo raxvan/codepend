@@ -122,6 +122,29 @@ namespace cdp
 	}
 	//--------------------------------------------------------------------------------------------------------------------------------
 
+	coroutine::await_on_frame::await_on_frame(frame& f, coroutine_context& coctx)
+		:frame_ptr(&f)
+	{
+		
+
+		coctx.frame_function.func = await_on_frame::frame_function;
+		coctx.frame_function.context = this;
+
+	}
+	bool coroutine::await_on_frame::frame_function(suspend_context& sc, coroutine& co, coroutine_pipe&, const bool)
+	{
+		//noop
+		await_on_frame& aw = static_cast<await_on_frame&>(sc);
+		CDP_ASSERT(aw.frame_ptr != nullptr);
+		auto& f = *aw.frame_ptr;
+
+		auto cohandle = co.detach();
+		f.frame_state._lock_for_resolve();
+		f.frame_state._attach(cohandle);
+		f.frame_state._unlock_unresolved();
+		return false;
+	}
+
 	//--------------------------------------------------------------------------------------------------------------------------------
 	coroutine::await_on_dependency_value::await_on_dependency_value(dependency& d, coroutine_context& coctx)
 	{

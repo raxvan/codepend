@@ -19,6 +19,8 @@ void thread_sleep(int ms_time)
 	std::this_thread::sleep_for(std::chrono::milliseconds(ms_time));
 }
 
+//--------------------------------------------------------------------------------------------------------------------------------
+
 cdp::coroutine hello_world()
 {
 	ttf::instance_counter local_guard;
@@ -75,12 +77,14 @@ void basic_coroutine_test()
 				pipe.execute_frame(co, false);
 			}
 
-			pipe.resolve_recursive(dep2);
+			pipe.resolve_in_frame(dep2);
 
 			TEST_ASSERT(pipe.empty() == true); // because cogen is waiting
 		}
 	}
 }
+
+//--------------------------------------------------------------------------------------------------------------------------------
 
 constexpr std::size_t dcount = 2048;
 using dependency_array = std::array<cdp::dependency, dcount>;
@@ -150,6 +154,8 @@ void test_more_coroutines()
 		threads[i].join();
 }
 
+//--------------------------------------------------------------------------------------------------------------------------------
+
 std::size_t& thread_index()
 {
 	thread_local std::size_t ti;
@@ -174,7 +180,7 @@ void test_coroutine_dependency()
 		threading::latch l { uint32_t(threads.size() + 1) };
 		threading::latch e { uint32_t(threads.size() + 1) };
 
-		auto thread_job = [&](const std::size_t index) { pipe.resolve_recursive(thread_dependency[index]); };
+		auto thread_job = [&](const std::size_t index) { pipe.resolve_in_frame(thread_dependency[index]); };
 
 		for (std::size_t i = 0; i < threads.size(); i++)
 		{
@@ -203,6 +209,8 @@ void test_coroutine_dependency()
 	for (std::size_t i = 0; i < threads.size(); i++)
 		threads[i].join();
 }
+
+//--------------------------------------------------------------------------------------------------------------------------------
 
 cdp::coroutine wait(const std::size_t index)
 {
@@ -251,6 +259,7 @@ void test_cosginal()
 		threads[i].join();
 }
 
+//--------------------------------------------------------------------------------------------------------------------------------
 
 cdp::coroutine setter(cdp::result<uint32_t>& one, cdp::result<uint32_t>& two, cdp::result<uint32_t>& three)
 {
@@ -280,6 +289,7 @@ void test_dependency_value()
 	pipe.consume_loop([&](cdp::coroutine&& co) { pipe.execute_frame(co, true); });
 }
 
+//--------------------------------------------------------------------------------------------------------------------------------
 
 cdp::coroutine string_setter(cdp::result<std::string>& h, cdp::result<std::string>& w)
 {
@@ -305,6 +315,79 @@ void test_string_value()
 	pipe.consume_loop([&](cdp::coroutine&& co) { pipe.execute_frame(co, true); });
 }
 
+//--------------------------------------------------------------------------------------------------------------------------------
+
+void test_frames()
+{
+	copipe pipe;
+
+	std::array<std::thread, 32> threads;
+
+	{
+		threading::latch l { uint32_t(threads.size() + 1) };
+
+		auto thread_job = [&](const std::size_t index) {
+			thread_index() = index + 1;
+			pipe.consume_loop_or_wait([&](cdp::coroutine&& co) {
+				pipe.execute_frame(co, false); 
+			});
+		};
+
+		for (std::size_t i = 0; i < threads.size(); i++)
+		{
+			auto t = std::thread([&, index = i]() {
+				l.arrive_and_wait();
+				thread_job(index);
+			});
+			threads[i].swap(t);
+		}
+		l.arrive_and_wait();
+	}
+
+	cdp::frame main_frame;
+	cdp::frame exit_frame;
+
+	auto cojob = [](auto& mf, auto& ef, bool& l) -> cdp::coroutine {
+		while(true)
+		{
+			ttf::instance_counter _refcheck;
+			std::size_t ti = thread_index();
+			TEST_ASSERT(thread_index() != 0);
+			co_await mf;
+			TEST_ASSERT(thread_index() == 0);
+			if(l == false)
+				break;
+			co_await ef;
+			thread_sleep(int(5 + ti % 4));
+		}
+		co_return;
+	};
+	
+	bool keep_looping = true;
+	for(std::size_t i = 0; i < 128;i++)
+	{
+		pipe.push_async(cojob(main_frame, exit_frame, keep_looping));
+	}
+
+	thread_index() = 0;
+	for(std::size_t i = 0; i < 10;i++)
+	{
+		thread_sleep(3);
+		pipe.execute_in_frame(main_frame, false);
+		pipe.execute_in_queue(exit_frame);
+	}
+	pipe.wait_for_empty();
+
+	pipe.execute_in_frame(exit_frame, false);
+	keep_looping = false;
+	pipe.execute_in_frame(main_frame, false);
+
+	pipe.evict();
+	for (std::size_t i = 0; i < threads.size(); i++)
+		threads[i].join();
+
+}
+
 void test_main()
 {
 	TEST_FUNCTION(test_coroutine_dependency);
@@ -313,6 +396,7 @@ void test_main()
 	TEST_FUNCTION(test_cosginal);
 	TEST_FUNCTION(test_dependency_value);
 	TEST_FUNCTION(test_string_value);
+	TEST_FUNCTION(test_frames);
 	
 }
 TEST_MAIN(test_main)

@@ -7,7 +7,9 @@ namespace cdp
 {
 	template <class T>
 	struct result;
+
 	struct dependency;
+	struct frame;
 	
 	struct coroutine_pipe;
 	struct coroutine;
@@ -82,6 +84,25 @@ namespace cdp
 			}
 
 			void await_resume(); // the result of await_resume is the result of `co_await EXPR`
+		};
+
+		struct await_on_frame : public suspend_context
+		{
+			frame* frame_ptr;
+
+			inline constexpr bool await_ready()
+			{
+				return false;
+			}
+			inline constexpr void await_suspend(handle_type)
+			{
+			}
+			inline constexpr void await_resume()
+			{
+			}
+
+			await_on_frame(frame& f, coroutine_context& coctx);
+			static bool frame_function(suspend_context&, coroutine&, coroutine_pipe&, const bool recursive);
 		};
 
 		struct await_on_dependency_value : public await_on_dependency_impl
@@ -160,8 +181,18 @@ namespace cdp
 				CDP_ASSERT(dptr != nullptr);
 				return await_on_dependency(*dptr, *this);
 			}
+			inline await_on_frame await_transform(frame& f)
+			{
+				return await_on_frame(f, *this);
+			}
+			inline await_on_frame await_transform(frame* fptr)
+			{
+				CDP_ASSERT(fptr != nullptr);
+				return await_on_frame(*fptr, *this);
+			}
 			inline await_on_dependency_value await_transform(result<uint32_t>& d);
 			inline await_on_dependency_value await_transform(result<uint32_t>* dptr);
+
 			template <class T>
 			inline await_on_dependency_result<T> await_transform(result<T>& dptr);
 			template <class T>

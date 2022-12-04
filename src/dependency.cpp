@@ -15,6 +15,7 @@ namespace cdp
 		return v2;
 	}
 
+	//--------------------------------------------------------------------------------------------------------------------------------
 
 	dependency::~dependency()
 	{
@@ -32,6 +33,8 @@ namespace cdp
 #endif
 	}
 
+	//--------------------------------------------------------------------------------------------------------------------------------
+
 	void dependency::add(coroutine&& co)
 	{
 		auto cohandle = co.detach();
@@ -44,9 +47,19 @@ namespace cdp
 	{
 		_lock_for_resolve();
 		auto result = _detach();
-		_resolve(payload);
+		_unlock_resolve(payload);
 		return result;
 	}
+	coroutine::handle_type dependency::detach()
+	{
+		_lock_for_resolve();
+		auto result = _detach();
+		_unlock_unresolved();
+		return result;
+	}
+
+	//--------------------------------------------------------------------------------------------------------------------------------
+
 	bool dependency::resolved(uint32_t& out)
 	{
 		while(true)
@@ -109,6 +122,8 @@ namespace cdp
 		CDP_ASSERT(waiting_list == coroutine::handle_type{});//must have no attached 
 		resolve_state.exchange(_unresolved_value(), std::memory_order_release);
 	}
+
+	//--------------------------------------------------------------------------------------------------------------------------------
 
 	bool dependency::_isresolved()
 	{
@@ -183,7 +198,7 @@ namespace cdp
 		}
 	}
 
-	void dependency::_resolve(const uint32_t r)
+	void dependency::_unlock_resolve(const uint32_t r)
 	{
 		uint32_t pr = resolve_state.exchange(r, std::memory_order_release);
 		CDP_ASSERT( pr == _locked_value() );
