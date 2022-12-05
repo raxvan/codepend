@@ -10,7 +10,7 @@ namespace cdp
 	cosignal::~cosignal()
 	{
 		std::unique_lock<std::mutex> _(m_mutex);
-		CDP_ASSERT( (m_counter == 0 || m_counter == 1) && m_waiting == false);
+		CDP_ASSERT((m_counter == 0 || m_counter == 1) && m_waiting == false);
 	}
 
 	void cosignal::reset()
@@ -23,7 +23,7 @@ namespace cdp
 	bool cosignal::wait()
 	{
 		std::unique_lock<std::mutex> lk(m_mutex);
-		int i = --m_counter;
+		int							 i = --m_counter;
 		CDP_ASSERT(i >= 0);
 		if (i != 0)
 		{

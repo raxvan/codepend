@@ -4,11 +4,11 @@
 namespace cdp
 {
 
-	inline constexpr uint32_t      _unresolved_value()
+	inline constexpr uint32_t _unresolved_value()
 	{
 		return std::numeric_limits<uint32_t>::max();
 	}
-	inline constexpr uint32_t      _locked_value()
+	inline constexpr uint32_t _locked_value()
 	{
 		constexpr uint32_t v1 = std::numeric_limits<uint32_t>::max();
 		constexpr uint32_t v2 = v1 - 1;
@@ -21,14 +21,14 @@ namespace cdp
 	{
 #ifdef CDP_TESTING
 		uint32_t t;
-		if(_lock_for_await(t))
+		if (_lock_for_await(t))
 		{
-			CDP_ASSERT(waiting_list == coroutine::handle_type{});
+			CDP_ASSERT(waiting_list == coroutine::handle_type {});
 			_unlock_unresolved();
 		}
 		else
 		{
-			CDP_ASSERT(t !=  _unresolved_value() && t != _locked_value());
+			CDP_ASSERT(t != _unresolved_value() && t != _locked_value());
 		}
 #endif
 	}
@@ -62,12 +62,12 @@ namespace cdp
 
 	bool dependency::resolved(uint32_t& out)
 	{
-		while(true)
+		while (true)
 		{
 			uint32_t r = resolve_state.load();
-			if(r == _unresolved_value())
+			if (r == _unresolved_value())
 				return false;
-			if(r == _locked_value())
+			if (r == _locked_value())
 				continue;
 			out = r;
 			return true;
@@ -75,12 +75,12 @@ namespace cdp
 	}
 	bool dependency::resolved()
 	{
-		while(true)
+		while (true)
 		{
 			uint32_t r = resolve_state.load();
-			if(r == _unresolved_value())
+			if (r == _unresolved_value())
 				return false;
-			if(r == _locked_value())
+			if (r == _locked_value())
 				continue;
 			return true;
 		}
@@ -88,10 +88,10 @@ namespace cdp
 
 	uint32_t dependency::get()
 	{
-		while(true)
+		while (true)
 		{
 			uint32_t r = resolve_state.load(std::memory_order_relaxed);
-			if(r == _locked_value())
+			if (r == _locked_value())
 				continue;
 			CDP_ASSERT(r != _unresolved_value());
 			return r;
@@ -100,17 +100,17 @@ namespace cdp
 
 	void dependency::reset()
 	{
-		while(true)
+		while (true)
 		{
 			uint32_t pr = resolve_state.exchange(_locked_value(), std::memory_order_acquire);
 
-			if(pr != _locked_value())
+			if (pr != _locked_value())
 			{
-				//already unresolved, do nothing
+				// already unresolved, do nothing
 				break;
 			}
 
-			while(true)
+			while (true)
 			{
 				if (pr == _locked_value())
 					pr = resolve_state.load(std::memory_order_relaxed);
@@ -119,7 +119,7 @@ namespace cdp
 			}
 		}
 
-		CDP_ASSERT(waiting_list == coroutine::handle_type{});//must have no attached 
+		CDP_ASSERT(waiting_list == coroutine::handle_type {}); // must have no attached
 		resolve_state.exchange(_unresolved_value(), std::memory_order_release);
 	}
 
@@ -127,10 +127,10 @@ namespace cdp
 
 	bool dependency::_isresolved()
 	{
-		while(true)
+		while (true)
 		{
 			uint32_t r = resolve_state.load();
-			if(r == _locked_value())
+			if (r == _locked_value())
 				continue;
 			return r != _unresolved_value();
 		}
@@ -138,7 +138,7 @@ namespace cdp
 
 	void dependency::_attach(coroutine::handle_type h)
 	{
-		CDP_ASSERT(h.promise().next_parallel == coroutine::handle_type{});
+		CDP_ASSERT(h.promise().next_parallel == coroutine::handle_type {});
 		h.promise().next_parallel = this->waiting_list;
 		this->waiting_list = h;
 	}
@@ -151,22 +151,22 @@ namespace cdp
 	}
 	void dependency::_lock_for_resolve()
 	{
-		while(true)
+		while (true)
 		{
 			uint32_t pr = resolve_state.exchange(_locked_value(), std::memory_order_acquire);
 
-			if(pr == _unresolved_value())
+			if (pr == _unresolved_value())
 				break;
 
-			while(true)
+			while (true)
 			{
 				if (pr == _locked_value())
 					pr = resolve_state.load(std::memory_order_relaxed);
-				else if(pr == _unresolved_value())
+				else if (pr == _unresolved_value())
 					break;
 				else
 				{
-					CDP_ASSERT(false);//dependency already resolved
+					CDP_ASSERT(false); // dependency already resolved
 				}
 			}
 		}
@@ -174,24 +174,23 @@ namespace cdp
 
 	bool dependency::_lock_for_await(uint32_t& out)
 	{
-		while(true)
+		while (true)
 		{
 			uint32_t pr = resolve_state.exchange(_locked_value());
 
-			if(pr == _unresolved_value())
+			if (pr == _unresolved_value())
 				return true;
 
-			if(pr == _locked_value())
+			if (pr == _locked_value())
 			{
 				do
 				{
 					pr = resolve_state.load();
-				}
-				while(pr == _locked_value());
+				} while (pr == _locked_value());
 			}
 			else
 			{
-				//resolved, put the value back
+				// resolved, put the value back
 				out = pr;
 				resolve_state.store(pr);
 				return false;
@@ -202,13 +201,12 @@ namespace cdp
 	void dependency::_unlock_resolve(const uint32_t r)
 	{
 		uint32_t pr = resolve_state.exchange(r, std::memory_order_release);
-		CDP_ASSERT( pr == _locked_value() );
+		CDP_ASSERT(pr == _locked_value());
 	}
 	void dependency::_unlock_unresolved()
 	{
 		uint32_t pr = resolve_state.exchange(_unresolved_value(), std::memory_order_release);
-		CDP_ASSERT( pr == _locked_value() );
+		CDP_ASSERT(pr == _locked_value());
 	}
-
 
 }

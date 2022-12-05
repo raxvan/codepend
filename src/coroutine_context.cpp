@@ -35,7 +35,7 @@ namespace cdp
 	coroutine::await_on_resolve::await_on_resolve(handle_type colist, coroutine_context& coctx)
 	{
 		resolve_list = colist;
-		//CDP_ASSERT(coctx.frame_function.valid() == false);
+		// CDP_ASSERT(coctx.frame_function.valid() == false);
 		if (resolve_list)
 		{
 			coctx.frame_function.func = await_on_resolve::frame_function;
@@ -63,7 +63,7 @@ namespace cdp
 	void coroutine::await_on_dependency::await_resume()
 	{
 #ifdef CDP_ENABLE_ASSERT
-		if(dependency_ptr != nullptr)
+		if (dependency_ptr != nullptr)
 		{
 			uint32_t tmp;
 			CDP_ASSERT(dependency_ptr->resolved(tmp) == true);
@@ -76,7 +76,7 @@ namespace cdp
 		{
 			dependency_ptr = &d;
 
-			//CDP_ASSERT(coctx.frame_function.valid() == false);
+			// CDP_ASSERT(coctx.frame_function.valid() == false);
 			coctx.frame_function.func = await_on_dependency_base::frame_function;
 			coctx.frame_function.context = this;
 		}
@@ -90,7 +90,7 @@ namespace cdp
 		await_on_dependency_base& aw = static_cast<await_on_dependency_base&>(sc);
 		CDP_ASSERT(aw.dependency_ptr != nullptr);
 		uint32_t tmp = std::numeric_limits<uint32_t>::max();
-		if(aw.dependency_ptr->_lock_for_await(tmp))
+		if (aw.dependency_ptr->_lock_for_await(tmp))
 		{
 			auto cohandle = co.detach();
 			aw.dependency_ptr->_attach(cohandle);
@@ -103,17 +103,15 @@ namespace cdp
 	//--------------------------------------------------------------------------------------------------------------------------------
 
 	coroutine::await_on_frame::await_on_frame(frame& f, coroutine_context& coctx)
-		:frame_ptr(&f)
+		: frame_ptr(&f)
 	{
-		
 
 		coctx.frame_function.func = await_on_frame::frame_function;
 		coctx.frame_function.context = this;
-
 	}
 	bool coroutine::await_on_frame::frame_function(suspend_context& sc, coroutine& co, coroutine_pipe&)
 	{
-		//noop
+		// noop
 		await_on_frame& aw = static_cast<await_on_frame&>(sc);
 		CDP_ASSERT(aw.frame_ptr != nullptr);
 		auto& f = *aw.frame_ptr;
@@ -132,7 +130,7 @@ namespace cdp
 		{
 			dependency_ptr = &d;
 
-			//CDP_ASSERT(coctx.frame_function.valid() == false);
+			// CDP_ASSERT(coctx.frame_function.valid() == false);
 			coctx.frame_function.func = await_on_dependency_value::frame_function;
 			coctx.frame_function.context = this;
 		}
@@ -146,8 +144,8 @@ namespace cdp
 	{
 		await_on_dependency_value& aw = static_cast<await_on_dependency_value&>(sc);
 		CDP_ASSERT(aw.dependency_ptr != nullptr);
-		
-		if(aw.dependency_ptr->_lock_for_await(aw.result))
+
+		if (aw.dependency_ptr->_lock_for_await(aw.result))
 		{
 			auto cohandle = co.detach();
 			aw.dependency_ptr->_attach(cohandle);
@@ -164,7 +162,7 @@ namespace cdp
 
 	uint32_t coroutine::await_on_dependency_value::await_resume()
 	{
-		if(dependency_ptr != nullptr)
+		if (dependency_ptr != nullptr)
 			return dependency_ptr->get();
 		else
 			return result;
@@ -190,18 +188,18 @@ namespace cdp
 
 	coroutine::coroutine_context::~coroutine_context()
 	{
-		CDP_ASSERT(refcount == 0 && next_parallel == handle_type{} && next_sequential == handle_type{});
+		CDP_ASSERT(refcount == 0 && next_parallel == handle_type {} && next_sequential == handle_type {});
 	}
 
 	coroutine::handle_type coroutine::coroutine_context::detach_parallel()
 	{
 		auto r = next_parallel;
-		next_parallel = handle_type{};
+		next_parallel = handle_type {};
 		return r;
 	}
 	void coroutine::coroutine_context::add_parallel(coroutine::handle_type h)
 	{
-		CDP_ASSERT(h.promise().next_parallel == handle_type{});
+		CDP_ASSERT(h.promise().next_parallel == handle_type {});
 		h.promise().next_parallel = next_parallel;
 		next_parallel = h;
 	}
@@ -209,12 +207,12 @@ namespace cdp
 	coroutine::handle_type coroutine::coroutine_context::detach_sequential()
 	{
 		auto r = next_sequential;
-		next_sequential = handle_type{};
+		next_sequential = handle_type {};
 		return r;
 	}
 	void coroutine::coroutine_context::add_sequential(coroutine::handle_type h)
 	{
-		CDP_ASSERT(h.promise().next_sequential == handle_type{});
+		CDP_ASSERT(h.promise().next_sequential == handle_type {});
 		h.promise().next_sequential = next_sequential;
 		next_sequential = h;
 	}

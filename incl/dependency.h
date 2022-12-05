@@ -7,7 +7,7 @@ namespace cdp
 	struct coroutine_pipe;
 
 	//--------------------------------------------------------------------------------------------------------------------------------
-	
+
 	struct dependency
 	{
 	public:
@@ -24,15 +24,15 @@ namespace cdp
 		bool resolved(uint32_t& out);
 		bool resolved();
 
-		void add(coroutine&& co); //add awaiting coroutine on this dependency
-		
+		void add(coroutine&& co); // add awaiting coroutine on this dependency
+
 		coroutine::handle_type resolve(const uint32_t payload = 0);
-		coroutine::handle_type detach();//must be unresolved, detaches all coroutines waiting on this
+		coroutine::handle_type detach(); // must be unresolved, detaches all coroutines waiting on this
 
 	public:
-		uint32_t get();//must be resolved
+		uint32_t get(); // must be resolved
 
-		void reset();//must be resolved, changes state to unresolved
+		void reset(); // must be resolved, changes state to unresolved
 	protected:
 		friend struct coroutine_pipe;
 		friend struct coroutine;
@@ -45,12 +45,12 @@ namespace cdp
 
 		bool _isresolved();
 
-		void _attach(coroutine::handle_type h);
+		void				   _attach(coroutine::handle_type h);
 		coroutine::handle_type _detach();
-		
+
 	protected:
-		std::atomic<uint32_t> 	resolve_state{ std::numeric_limits<uint32_t>::max() };
-		coroutine::handle_type 	waiting_list;
+		std::atomic<uint32_t>  resolve_state { std::numeric_limits<uint32_t>::max() };
+		coroutine::handle_type waiting_list;
 	};
 
 	//--------------------------------------------------------------------------------------------------------------------------------
@@ -65,13 +65,14 @@ namespace cdp
 		{
 			frame_state.add(std::move(co));
 		}
+
 	protected:
 		dependency frame_state;
+
 	protected:
 		friend struct coroutine_pipe;
 		friend struct coroutine;
 	};
-	
 
 	//--------------------------------------------------------------------------------------------------------------------------------
 
@@ -85,26 +86,27 @@ namespace cdp
 		result() = default;
 		template <std::convertible_to<T> From>
 		result(From&& v)
-			:value(std::forward<From>(v))
+			: value(std::forward<From>(v))
 		{
 		}
+
 	public:
 		template <std::convertible_to<T> From>
-		inline coroutine::resolved_dependency_colist_value<T> operator = (From&& v)
+		inline coroutine::resolved_dependency_colist_value<T> operator=(From&& v)
 		{
 			_lock_for_resolve();
 			auto rl = _detach();
 			value = std::forward<From>(v);
 			_unlock_resolve(0);
-			return { rl , &value };
+			return { rl, &value };
 		}
 	};
 
 	template <>
-	struct result <uint32_t> : public dependency
+	struct result<uint32_t> : public dependency
 	{
 	public:
-		inline coroutine::resolved_dependency_colist operator = (const uint32_t& v)
+		inline coroutine::resolved_dependency_colist operator=(const uint32_t& v)
 		{
 			_lock_for_resolve();
 			auto rl = _detach();
@@ -142,7 +144,7 @@ namespace cdp
 	const T& coroutine::await_on_dependency_result<T>::await_resume()
 	{
 #ifdef CDP_ENABLE_ASSERT
-		if(dependency_ptr != nullptr)
+		if (dependency_ptr != nullptr)
 		{
 			uint32_t tmp;
 			CDP_ASSERT(dependency_ptr->resolved(tmp) == true);

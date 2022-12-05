@@ -10,7 +10,7 @@ namespace cdp
 
 	struct dependency;
 	struct frame;
-	
+
 	struct coroutine_pipe;
 	struct coroutine;
 
@@ -45,7 +45,7 @@ namespace cdp
 		struct resolved_dependency_colist_value
 		{
 			handle_type resolve_list;
-			const T* value_ptr;
+			const T*	value_ptr;
 		};
 
 		struct await_on_dependency_impl : public suspend_context
@@ -78,7 +78,7 @@ namespace cdp
 		struct await_on_dependency : public await_on_dependency_base
 		{
 			inline await_on_dependency(dependency& d, coroutine_context& coctx)
-				:await_on_dependency_base(d, coctx)
+				: await_on_dependency_base(d, coctx)
 			{
 			}
 
@@ -109,13 +109,13 @@ namespace cdp
 			uint32_t result;
 
 			await_on_dependency_value(dependency& d, coroutine_context& coctx);
-			
+
 			uint32_t await_resume(); // the result of await_resume is the result of `co_await EXPR`
 
 			static bool frame_function(suspend_context&, coroutine&, coroutine_pipe&);
 		};
 
-		template<class T>
+		template <class T>
 		struct await_on_dependency_result : public await_on_dependency_base
 		{
 			const T* value_ptr;
@@ -123,8 +123,8 @@ namespace cdp
 			inline const T& await_resume();
 
 			inline await_on_dependency_result(dependency& d, coroutine_context& coctx, const T* _value_ptr)
-				:await_on_dependency_base(d, coctx)
-				,value_ptr(_value_ptr)
+				: await_on_dependency_base(d, coctx)
+				, value_ptr(_value_ptr)
 			{
 			}
 		};
@@ -139,14 +139,15 @@ namespace cdp
 			static bool frame_function(suspend_context&, coroutine&, coroutine_pipe&);
 		};
 
-		template<class T>
+		template <class T>
 		struct await_on_resolve_value : public await_on_resolve
 		{
 			const T* value_ptr;
 			inline await_on_resolve_value(handle_type colist, coroutine_context& coctx, const T* _value_ptr)
-				:await_on_resolve(colist,coctx)
-				,value_ptr(_value_ptr)
-			{}
+				: await_on_resolve(colist, coctx)
+				, value_ptr(_value_ptr)
+			{
+			}
 			inline const T& await_resume()
 			{
 				CDP_ASSERT(value_ptr != nullptr);
@@ -155,7 +156,7 @@ namespace cdp
 		};
 
 		template <class F>
-		//func: coroutine F()
+		// func: coroutine F()
 		struct await_on_frame_function : public suspend_context
 		{
 			F func;
@@ -171,30 +172,32 @@ namespace cdp
 			inline constexpr void await_resume()
 			{
 			}
-			//static bool frame_function(suspend_context&, coroutine&, coroutine_pipe&);
+			// static bool frame_function(suspend_context&, coroutine&, coroutine_pipe&);
 		};
 
 		template <class F>
-		//func: bool F(coroutine& co, coroutine_pipe& pipe)
+		// func: bool F(coroutine& co, coroutine_pipe& pipe)
 		struct yield_frame_function
 		{
 			F func;
 			using class_t = yield_frame_function<F>;
 
 			inline yield_frame_function(F&& _func)
-				:func(std::move(_func))
-			{}
+				: func(std::move(_func))
+			{
+			}
 			inline yield_frame_function(class_t&& other)
-				:func(std::move(other.func))
-			{}
-			
-			yield_frame_function(const class_t& ) = delete;
-			class_t& operator = (class_t&& other) = delete;
-			class_t& operator = (const class_t& ) = delete;
+				: func(std::move(other.func))
+			{
+			}
+
+			yield_frame_function(const class_t&) = delete;
+			class_t& operator=(class_t&& other) = delete;
+			class_t& operator=(const class_t&) = delete;
 		};
 
 		template <class F>
-		//bool F(coroutine& co, coroutine_pipe& pipe)
+		// bool F(coroutine& co, coroutine_pipe& pipe)
 		static yield_frame_function<F> frame_function(F&& _func)
 		{
 			return yield_frame_function<F>(std::move(_func));
@@ -211,8 +214,8 @@ namespace cdp
 			int32_t refcount = 1; // 1 for when it's created
 
 			suspend_data frame_function;
-			handle_type	 next_parallel; //on dependency
-			handle_type	 next_sequential; //on dependency
+			handle_type	 next_parallel;	  // on dependency
+			handle_type	 next_sequential; // on dependency
 
 			cosignal* destroy_signal = nullptr;
 
@@ -243,7 +246,6 @@ namespace cdp
 			inline await_on_dependency_result<T> await_transform(result<T>& dptr);
 			template <class T>
 			inline await_on_dependency_result<T> await_transform(result<T>* dptr);
-			
 
 			await_on_resolve yield_value(dependency& d);
 			await_on_resolve yield_value(dependency* dptr);
@@ -260,7 +262,6 @@ namespace cdp
 			{
 				return await_on_frame_function<F>(std::move(yv.func), *this);
 			}
-
 
 		public:
 			coroutine_context() = default;
@@ -315,7 +316,7 @@ namespace cdp
 			}
 			static void operator delete(void* p)
 			{
-				::delete(p);
+				::delete (p);
 			}
 
 			/*
@@ -351,7 +352,6 @@ namespace cdp
 		coroutine operator+(cosignal* csg) const;
 
 	public:
-
 		coroutine(const handle_type& ht);
 		void		attach(const handle_type& ht);
 		handle_type detach();

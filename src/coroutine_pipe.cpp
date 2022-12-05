@@ -14,7 +14,7 @@ namespace cdp
 		while (h)
 		{
 			coroutine::handle_type hnext = h.promise().detach_parallel();
-			coroutine co(h);
+			coroutine			   co(h);
 			this->execute_frame(co);
 			h = hnext;
 		}
@@ -24,7 +24,7 @@ namespace cdp
 		while (h)
 		{
 			coroutine::handle_type hnext = h.promise().detach_parallel();
-			coroutine co(h);
+			coroutine			   co(h);
 			this->push_async(std::move(co));
 			h = hnext;
 		}
@@ -41,7 +41,7 @@ namespace cdp
 			{
 				{
 					auto hn = co.handle.promise().detach_sequential();
-					if(hn)
+					if (hn)
 						this->push_async(coroutine(hn));
 				}
 
@@ -54,7 +54,7 @@ namespace cdp
 			if (ffunc.run(co, *this))
 				continue;
 
-			CDP_ASSERT(!co.handle); //it must be detached
+			CDP_ASSERT(!co.handle); // it must be detached
 
 			return false;
 		}
