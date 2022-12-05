@@ -16,7 +16,7 @@ namespace cdp
 
 	struct suspend_context
 	{
-		using suspend_operator = bool(suspend_context&, coroutine&, coroutine_pipe&, const bool recursive);
+		using suspend_operator = bool(suspend_context&, coroutine&, coroutine_pipe&);
 	};
 
 	struct suspend_data
@@ -24,7 +24,7 @@ namespace cdp
 		suspend_context::suspend_operator* func = nullptr;
 		suspend_context*				   context = nullptr;
 
-		bool run(coroutine& co, coroutine_pipe& pipe, const bool recursive);
+		bool run(coroutine& co, coroutine_pipe& pipe);
 		bool valid() const;
 		void reset();
 	};
@@ -73,7 +73,7 @@ namespace cdp
 		struct await_on_dependency_base : public await_on_dependency_impl
 		{
 			await_on_dependency_base(dependency& d, coroutine_context& coctx);
-			static bool frame_function(suspend_context&, coroutine&, coroutine_pipe&, const bool recursive);
+			static bool frame_function(suspend_context&, coroutine&, coroutine_pipe&);
 		};
 		struct await_on_dependency : public await_on_dependency_base
 		{
@@ -101,7 +101,7 @@ namespace cdp
 			}
 
 			await_on_frame(frame& f, coroutine_context& coctx);
-			static bool frame_function(suspend_context&, coroutine&, coroutine_pipe&, const bool recursive);
+			static bool frame_function(suspend_context&, coroutine&, coroutine_pipe&);
 		};
 
 		struct await_on_dependency_value : public await_on_dependency_impl
@@ -112,7 +112,7 @@ namespace cdp
 			
 			uint32_t await_resume(); // the result of await_resume is the result of `co_await EXPR`
 
-			static bool frame_function(suspend_context&, coroutine&, coroutine_pipe&, const bool recursive);
+			static bool frame_function(suspend_context&, coroutine&, coroutine_pipe&);
 		};
 
 		template<class T>
@@ -136,7 +136,7 @@ namespace cdp
 			constexpr void await_resume()
 			{
 			}
-			static bool frame_function(suspend_context&, coroutine&, coroutine_pipe&, const bool recursive);
+			static bool frame_function(suspend_context&, coroutine&, coroutine_pipe&);
 		};
 
 		template<class T>
@@ -171,11 +171,11 @@ namespace cdp
 			inline constexpr void await_resume()
 			{
 			}
-			//static bool frame_function(suspend_context&, coroutine&, coroutine_pipe&, const bool recursive);
+			//static bool frame_function(suspend_context&, coroutine&, coroutine_pipe&);
 		};
 
 		template <class F>
-		//func: bool F(coroutine& co, coroutine_pipe& pipe, const bool recursive)
+		//func: bool F(coroutine& co, coroutine_pipe& pipe)
 		struct yield_frame_function
 		{
 			F func;
@@ -194,7 +194,7 @@ namespace cdp
 		};
 
 		template <class F>
-		//bool F(coroutine& co, coroutine_pipe& pipe, const bool recursive)
+		//bool F(coroutine& co, coroutine_pipe& pipe)
 		static yield_frame_function<F> frame_function(F&& _func)
 		{
 			return yield_frame_function<F>(std::move(_func));

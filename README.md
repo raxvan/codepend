@@ -29,7 +29,7 @@ void execute_all()
 	pipe.push_async(satisfy_dependncy(pipe, dep1));
 	pipe.push_async(wait_on_dependency(dep1));
 	pipe.consume_loop([&](cdp::coroutine&& co) {
-		pipe.execute_frame(co, true);
+		pipe.execute_frame(co);
 	});
 }
 
@@ -46,7 +46,7 @@ but you can use multiple threads for this shenanigan:
 ```
 //multiple threads doing this:
 pipe.consume_loop_or_wait([&](cdp::coroutine&& co) {
-	pipe.execute_frame(co, false);
+	pipe.execute_frame(co);
 });
 ```
 
@@ -55,10 +55,6 @@ pipe.consume_loop_or_wait([&](cdp::coroutine&& co) {
 1. Address the coroutine allocator issue:
 	
 	Currently the default new/delete operators are used and this needs to addressed. C++20 coroutines offer poor support for custom allocators for coroutines, and this makes me sad, but i have an idea ... using thread local storage ...
-
-2. Waiting on tasks directly:
-
-	Instead of `pipe.push_back(some_coroutine(...)); ... co_await some_dependency` maybe something like `auto co = some_coroutine(...); ... co_await co;`. For the user it's syntactic sugar mostly.
 
 3. More safety and tooling:
 

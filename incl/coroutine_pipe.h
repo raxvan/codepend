@@ -8,24 +8,21 @@ namespace cdp
 	struct coroutine_pipe
 	{
 	public:
-		bool execute_frame(coroutine& co, const bool recursive); // return true if coroutine has finished
-
-		void resolve_in_frame(dependency& dep, const uint32_t payload = 0, const bool recursive = true);
-		void resolve_in_queue(dependency& dep, const uint32_t payload = 0);
-
+		bool execute_frame(coroutine& co); // return true if coroutine has finished
 
 	public:
-		//execute while not resolving dependency
-		void execute_in_frame(frame& dep, const bool recursive);
+		void resolve_in_frame(dependency& dep, const uint32_t payload = 0);
+		void resolve_in_queue(dependency& dep, const uint32_t payload = 0);
+
+		void execute_in_frame(frame& dep);
 		void execute_in_queue(frame& dep);
-                    
 	public:
 		virtual void push_async(coroutine&& co) = 0;
 
 	protected:
 		friend struct coroutine;
 		void _push_list_in_queue(coroutine::handle_type h);
-		void _execute_list_in_frame(coroutine::handle_type h, const bool recursive);
+		void _execute_list_in_frame(coroutine::handle_type h);
 
 	public:
 		~coroutine_pipe();
@@ -38,10 +35,10 @@ namespace cdp
 	inline coroutine::await_on_frame_function<F>::await_on_frame_function(F&& _func, coroutine_context& coctx)
 		:func(std::move(_func))
 	{
-		auto frame_function = [](suspend_context& sc, coroutine& co, coroutine_pipe& pipe, const bool recursive) -> bool
+		auto frame_function = [](suspend_context& sc, coroutine& co, coroutine_pipe& pipe) -> bool
 		{
 			await_on_frame_function<F>& self = static_cast<await_on_frame_function<F>&>(sc);
-			return self.func(co, pipe, recursive);
+			return self.func(co, pipe);
 		};
 
 		coctx.frame_function.func = frame_function;

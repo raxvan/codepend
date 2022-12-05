@@ -15,10 +15,10 @@ namespace cdp
 		func = nullptr;
 		context = nullptr;
 	}
-	bool suspend_data::run(coroutine& co, coroutine_pipe& pipe, const bool recursive)
+	bool suspend_data::run(coroutine& co, coroutine_pipe& pipe)
 	{
 		CDP_ASSERT(valid());
-		return (*func)(*context, co, pipe, recursive);
+		return (*func)(*context, co, pipe);
 	}
 
 	//--------------------------------------------------------------------------------------------------------------------------------
@@ -42,17 +42,12 @@ namespace cdp
 			coctx.frame_function.context = this;
 		}
 	}
-	
-	bool coroutine::await_on_resolve::frame_function(suspend_context& sc, coroutine&, coroutine_pipe& pipe, const bool recursive)
+
+	bool coroutine::await_on_resolve::frame_function(suspend_context& sc, coroutine&, coroutine_pipe& pipe)
 	{
 		await_on_resolve& dr = static_cast<await_on_resolve&>(sc);
 		CDP_ASSERT(dr.resolve_list);
-		
-		if(recursive)
-			pipe._execute_list_in_frame(dr.resolve_list, true);
-		else
-			pipe._push_list_in_queue(dr.resolve_list);
-		
+		pipe._push_list_in_queue(dr.resolve_list);
 		return true;
 	}
 
@@ -90,7 +85,7 @@ namespace cdp
 			dependency_ptr = nullptr;
 		}
 	}
-	bool coroutine::await_on_dependency_base::frame_function(suspend_context& sc, coroutine& co, coroutine_pipe&, const bool)
+	bool coroutine::await_on_dependency_base::frame_function(suspend_context& sc, coroutine& co, coroutine_pipe&)
 	{
 		await_on_dependency_base& aw = static_cast<await_on_dependency_base&>(sc);
 		CDP_ASSERT(aw.dependency_ptr != nullptr);
@@ -116,7 +111,7 @@ namespace cdp
 		coctx.frame_function.context = this;
 
 	}
-	bool coroutine::await_on_frame::frame_function(suspend_context& sc, coroutine& co, coroutine_pipe&, const bool)
+	bool coroutine::await_on_frame::frame_function(suspend_context& sc, coroutine& co, coroutine_pipe&)
 	{
 		//noop
 		await_on_frame& aw = static_cast<await_on_frame&>(sc);
@@ -147,7 +142,7 @@ namespace cdp
 		}
 	}
 
-	bool coroutine::await_on_dependency_value::frame_function(suspend_context& sc, coroutine& co, coroutine_pipe&, const bool)
+	bool coroutine::await_on_dependency_value::frame_function(suspend_context& sc, coroutine& co, coroutine_pipe&)
 	{
 		await_on_dependency_value& aw = static_cast<await_on_dependency_value&>(sc);
 		CDP_ASSERT(aw.dependency_ptr != nullptr);
