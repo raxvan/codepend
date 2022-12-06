@@ -9,18 +9,9 @@ namespace cdp
 
 	cosignal::~cosignal()
 	{
-		std::unique_lock<std::mutex> _(m_mutex);
-		CDP_ASSERT((m_counter == 0 || m_counter == 1) && m_waiting == false);
 	}
 
-	void cosignal::reset()
-	{
-		std::unique_lock<std::mutex> _(m_mutex);
-		CDP_ASSERT(m_counter == 0 || m_counter == 1 && m_waiting == false);
-		m_counter.store(1);
-	}
-
-	bool cosignal::wait()
+	void cosignal::wait()
 	{
 		std::unique_lock<std::mutex> lk(m_mutex);
 		int							 i = --m_counter;
@@ -30,18 +21,24 @@ namespace cdp
 			m_waiting = true;
 			m_wait.wait(lk);
 			m_waiting = false;
-			return true;
 		}
 
-		return false;
+		m_counter++;
 	}
 
-	void cosignal::add_to_arrivals()
+	bool cosignal::active()
+	{
+		auto i = m_counter.load();
+		CDP_ASSERT(i >= 0);
+		return i > 1;
+	}
+
+	void cosignal::acquire()
 	{
 		m_counter++;
 	}
 
-	void cosignal::arrive_and_continue()
+	void cosignal::release_and_continue()
 	{
 		int r = --m_counter;
 		CDP_ASSERT(r >= 0);

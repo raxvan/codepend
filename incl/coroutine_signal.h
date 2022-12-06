@@ -13,14 +13,16 @@ namespace cdp
 
 	public:
 		cosignal();
-		void reset();
 
 	public:
-		bool wait(); // returns true if thread waited
+		void wait(); // for release
 
 	public:
-		void add_to_arrivals();
-		void arrive_and_continue();
+		bool active();//true if number of acquires != 0
+
+	public:
+		void acquire();
+		void release_and_continue();
 
 	protected:
 		std::atomic<int> m_counter { 1 };

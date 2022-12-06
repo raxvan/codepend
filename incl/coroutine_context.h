@@ -348,8 +348,8 @@ namespace cdp
 		coroutine(const coroutine& other);
 		~coroutine();
 
-		coroutine operator+(cosignal& csg) const;
-		coroutine operator+(cosignal* csg) const;
+		void set_signal(cosignal& csg);
+		void set_signal(cosignal* csg);
 
 	public:
 		coroutine(const handle_type& ht);

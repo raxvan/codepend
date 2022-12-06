@@ -55,13 +55,13 @@ void basic_coroutine_test()
 		pipe.push_async(hello_world());
 		pipe.push_async(satisfy_dependncy(dep1));
 		pipe.push_async(wait_on_dependency(dep1));
-		pipe.consume_loop([&](cdp::coroutine&& co) { pipe.execute_frame(co); });
+		pipe.consume_loop([&](cdp::coroutine&& co) { pipe.execute_frame(std::move(co)); });
 		TEST_ASSERT(pipe.empty() == true);
 
 		{
 			pipe.push_async(hello_world());
 			TEST_ASSERT(pipe.empty() == false);
-			pipe.consume_loop([&](cdp::coroutine&& co) { pipe.execute_frame(co); });
+			pipe.consume_loop([&](cdp::coroutine&& co) { pipe.execute_frame(std::move(co)); });
 		}
 
 		{
@@ -74,7 +74,7 @@ void basic_coroutine_test()
 			{
 				auto co = cogen(dep2);
 				auto cobk = co;
-				pipe.execute_frame(co);
+				pipe.execute_frame(std::move(co));
 			}
 
 			pipe.resolve_in_frame(dep2);
@@ -117,7 +117,7 @@ void test_more_coroutines()
 	{
 		threading::latch l { uint32_t(threads.size() + 1) };
 
-		auto thread_job = [&](const std::size_t) { pipe.consume_loop_or_wait([&](cdp::coroutine&& co) { pipe.execute_frame(co); }); };
+		auto thread_job = [&](const std::size_t) { pipe.consume_loop_or_wait([&](cdp::coroutine&& co) { pipe.execute_frame(std::move(co)); }); };
 
 		for (std::size_t i = 0; i < threads.size(); i++)
 		{
@@ -227,7 +227,7 @@ void test_cosginal()
 	{
 		threading::latch l { uint32_t(threads.size() + 1) };
 
-		auto thread_job = [&](const std::size_t) { pipe.consume_loop_or_wait([&](cdp::coroutine&& co) { pipe.execute_frame(co); }); };
+		auto thread_job = [&](const std::size_t) { pipe.consume_loop_or_wait([&](cdp::coroutine&& co) { pipe.execute_frame(std::move(co)); }); };
 
 		for (std::size_t i = 0; i < threads.size(); i++)
 		{
@@ -243,17 +243,24 @@ void test_cosginal()
 	cdp::cosignal wait_first;
 	cdp::cosignal wait_second;
 
+	TEST_ASSERT(wait_first.active() == false);
+	TEST_ASSERT(wait_second.active() == false);
+
 	for (std::size_t i = 0; i < 100; i++)
 	{
+		auto ic = wait(i);
 		if (i % 2 == 0)
-			pipe.push_async(wait(i) + wait_first);
+			ic.set_signal(wait_first);
 		else
-			pipe.push_async(wait(i) + wait_second);
+			ic.set_signal(wait_second);
+		pipe.push_async(std::move(ic));
 	}
 
-	TEST_ASSERT(wait_first.wait() == true);
+	TEST_ASSERT(wait_first.active() == true);
+	wait_first.wait();
 	pipe.wait_for_empty();
-	TEST_ASSERT(wait_second.wait() == false);
+	TEST_ASSERT(wait_second.active() == false);
+	wait_second.wait();
 	pipe.evict();
 	for (std::size_t i = 0; i < threads.size(); i++)
 		threads[i].join();
@@ -286,7 +293,7 @@ void test_dependency_value()
 	pipe.push_async(getter(two, 2));
 	pipe.push_async(getter(three, 3));
 
-	pipe.consume_loop([&](cdp::coroutine&& co) { pipe.execute_frame(co); });
+	pipe.consume_loop([&](cdp::coroutine&& co) { pipe.execute_frame(std::move(co)); });
 }
 
 //--------------------------------------------------------------------------------------------------------------------------------
@@ -311,7 +318,7 @@ void test_string_value()
 	pipe.push_async(string_setter(h, w));
 	pipe.push_async(writer(h));
 
-	pipe.consume_loop([&](cdp::coroutine&& co) { pipe.execute_frame(co); });
+	pipe.consume_loop([&](cdp::coroutine&& co) { pipe.execute_frame(std::move(co)); });
 }
 
 //--------------------------------------------------------------------------------------------------------------------------------
@@ -327,7 +334,7 @@ void test_frames()
 
 		auto thread_job = [&](const std::size_t index) {
 			thread_index() = index + 1;
-			pipe.consume_loop_or_wait([&](cdp::coroutine&& co) { pipe.execute_frame(co); });
+			pipe.consume_loop_or_wait([&](cdp::coroutine&& co) { pipe.execute_frame(std::move(co)); });
 		};
 
 		for (std::size_t i = 0; i < threads.size(); i++)
@@ -413,7 +420,7 @@ void test_coroutine_generator()
 	};
 
 	pipe.push_async(main_coroutine(counter));
-	pipe.consume_loop([&](cdp::coroutine&& co) { pipe.execute_frame(co); });
+	pipe.consume_loop([&](cdp::coroutine&& co) { pipe.execute_frame(std::move(co)); });
 
 	TEST_ASSERT(counter == 10);
 }

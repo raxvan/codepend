@@ -8,7 +8,7 @@ namespace cdp
 	struct coroutine_pipe
 	{
 	public:
-		bool execute_frame(coroutine& co); // return true if coroutine has finished
+		void execute_frame(coroutine&& co); // return true if coroutine has finished
 
 	public:
 		void resolve_in_frame(dependency& dep, const uint32_t payload = 0);

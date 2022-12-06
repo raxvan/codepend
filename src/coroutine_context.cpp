@@ -249,18 +249,16 @@ namespace cdp
 		swap(tmp);
 	}
 
-	coroutine coroutine::operator+(cosignal& csg) const
+	void coroutine::set_signal(cosignal& csg)
 	{
 		CDP_ASSERT(handle && handle.promise().destroy_signal == nullptr);
-		csg.add_to_arrivals();
+		csg.acquire();
 		handle.promise().destroy_signal = &csg;
-
-		return (*this);
 	}
-	coroutine coroutine::operator+(cosignal* csg) const
+	void coroutine::set_signal(cosignal* csg)
 	{
 		CDP_ASSERT(csg != nullptr);
-		return (*this) + *csg;
+		set_signal(*csg);
 	}
 
 	//--------------------------------------------------------------------------------------------------------------------------------
@@ -302,7 +300,7 @@ namespace cdp
 				auto* destroy_signal = handle.promise().destroy_signal;
 				handle.destroy();
 				if (destroy_signal != nullptr)
-					destroy_signal->arrive_and_continue();
+					destroy_signal->release_and_continue();
 			}
 		}
 	}
