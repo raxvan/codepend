@@ -39,14 +39,16 @@ namespace cdp
 
 			if (h.done())
 			{
-				{
-					auto hn = co.handle.promise().detach_sequential();
-					if (hn)
-						this->push_async(coroutine(hn));
-				}
-
+				auto hn = h.promise().detach_sequential();
 				co.reset();
-				return true;
+				
+				if (hn)
+				{
+					coroutine nextco(hn);
+					execute_frame(nextco);
+				}
+				
+				break;
 			}
 
 			auto ffunc = h.promise().frame_function;
@@ -56,7 +58,7 @@ namespace cdp
 
 			CDP_ASSERT(!co.handle); // it must be detached
 
-			return false;
+			break;
 		}
 	}
 
