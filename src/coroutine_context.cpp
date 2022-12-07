@@ -217,6 +217,15 @@ namespace cdp
 		next_sequential = h;
 	}
 
+	void* coroutine::coroutine_context::operator new(size_t size)
+	{
+		return ::operator new(size);
+	}
+	void coroutine::coroutine_context::operator delete(void* p)
+	{
+		::delete (p);
+	}
+
 	//--------------------------------------------------------------------------------------------------------------------------------
 
 	coroutine& coroutine::operator=(const coroutine& other)

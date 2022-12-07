@@ -310,14 +310,8 @@ namespace cdp
 			}
 			*/
 
-			static void* operator new(size_t size)
-			{
-				return ::operator new(size);
-			}
-			static void operator delete(void* p)
-			{
-				::delete (p);
-			}
+			static void* operator new(size_t size);
+			static void operator delete(void* p);
 
 			/*
 			template <class ... ARGS>
