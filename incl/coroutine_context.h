@@ -344,6 +344,7 @@ namespace cdp
 		void swap(coroutine& other);
 		void reset();
 
+		bool valid() const;
 	public:
 		coroutine(const coroutine& other);
 		~coroutine();

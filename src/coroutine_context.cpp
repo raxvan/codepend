@@ -236,6 +236,10 @@ namespace cdp
 	{
 		swap(other);
 	}
+	bool coroutine::valid() const
+	{
+		return handle != handle_type{};
+	}
 
 	void coroutine::swap(coroutine& other)
 	{
