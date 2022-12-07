@@ -104,9 +104,14 @@ namespace cdp
 		{
 			uint32_t pr = resolve_state.exchange(_locked_value(), std::memory_order_acquire);
 
+			if (pr == _unresolved_value())
+			{
+				break;
+			}
 			if (pr != _locked_value())
 			{
-				// already unresolved, do nothing
+				// resolved, change to unresolved
+				CDP_ASSERT(waiting_list == coroutine::handle_type{}); // must have no attached
 				break;
 			}
 
@@ -119,7 +124,7 @@ namespace cdp
 			}
 		}
 
-		CDP_ASSERT(waiting_list == coroutine::handle_type {}); // must have no attached
+		
 		resolve_state.exchange(_unresolved_value(), std::memory_order_release);
 	}
 
