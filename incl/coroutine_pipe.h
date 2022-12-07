@@ -20,10 +20,13 @@ namespace cdp
 	public:
 		virtual void push_async(coroutine&& co) = 0;
 
+		void execute_list_in_frame(coroutine::handle_type h);
+		void push_list_in_queue(coroutine::handle_type h);
+
 	protected:
 		friend struct coroutine;
-		void _push_list_in_queue(coroutine::handle_type h);
-		void _execute_list_in_frame(coroutine::handle_type h);
+		
+		
 
 	public:
 		~coroutine_pipe();

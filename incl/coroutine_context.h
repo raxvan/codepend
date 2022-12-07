@@ -118,11 +118,11 @@ namespace cdp
 		template <class T>
 		struct await_on_dependency_result : public await_on_dependency_base
 		{
-			const T* value_ptr;
+			T* value_ptr;
 
-			inline const T& await_resume();
+			inline T& await_resume();
 
-			inline await_on_dependency_result(dependency& d, coroutine_context& coctx, const T* _value_ptr)
+			inline await_on_dependency_result(dependency& d, coroutine_context& coctx, T* _value_ptr)
 				: await_on_dependency_base(d, coctx)
 				, value_ptr(_value_ptr)
 			{

@@ -90,8 +90,18 @@ namespace cdp
 		{
 		}
 
-	public:
 		template <std::convertible_to<T> From>
+		inline coroutine::handle_type resolve(From&& v)
+		{
+			_lock_for_resolve();
+			auto rl = _detach();
+			value = std::forward<From>(v);
+			_unlock_resolve(0);
+			return rl;
+		}
+
+	public:
+		/*template <std::convertible_to<T> From>
 		inline coroutine::resolved_dependency_colist_value<T> operator=(From&& v)
 		{
 			_lock_for_resolve();
@@ -99,7 +109,7 @@ namespace cdp
 			value = std::forward<From>(v);
 			_unlock_resolve(0);
 			return { rl, &value };
-		}
+		}*/
 	};
 
 	template <>
@@ -141,7 +151,7 @@ namespace cdp
 	}
 
 	template <class T>
-	const T& coroutine::await_on_dependency_result<T>::await_resume()
+	T& coroutine::await_on_dependency_result<T>::await_resume()
 	{
 #ifdef CDP_ENABLE_ASSERT
 		if (dependency_ptr != nullptr)

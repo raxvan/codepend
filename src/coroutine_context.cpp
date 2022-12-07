@@ -47,7 +47,7 @@ namespace cdp
 	{
 		await_on_resolve& dr = static_cast<await_on_resolve&>(sc);
 		CDP_ASSERT(dr.resolve_list);
-		pipe._push_list_in_queue(dr.resolve_list);
+		pipe.push_list_in_queue(dr.resolve_list);
 		return true;
 	}
 

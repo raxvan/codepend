@@ -9,7 +9,7 @@ namespace cdp
 	{
 	}
 
-	void coroutine_pipe::_execute_list_in_frame(coroutine::handle_type h)
+	void coroutine_pipe::execute_list_in_frame(coroutine::handle_type h)
 	{
 		while (h)
 		{
@@ -18,7 +18,7 @@ namespace cdp
 			h = hnext;
 		}
 	}
-	void coroutine_pipe::_push_list_in_queue(coroutine::handle_type h)
+	void coroutine_pipe::push_list_in_queue(coroutine::handle_type h)
 	{
 		while (h)
 		{
@@ -59,19 +59,19 @@ namespace cdp
 
 	void coroutine_pipe::execute_in_frame(frame& f)
 	{
-		_execute_list_in_frame(f.frame_state.detach());
+		execute_list_in_frame(f.frame_state.detach());
 	}
 	void coroutine_pipe::execute_in_queue(frame& f)
 	{
-		_push_list_in_queue(f.frame_state.detach());
+		push_list_in_queue(f.frame_state.detach());
 	}
 	void coroutine_pipe::resolve_in_frame(dependency& d, const uint32_t payload)
 	{
-		_execute_list_in_frame(d.resolve(payload));
+		execute_list_in_frame(d.resolve(payload));
 	}
 	void coroutine_pipe::resolve_in_queue(dependency& d, const uint32_t payload)
 	{
-		_push_list_in_queue(d.resolve(payload));
+		push_list_in_queue(d.resolve(payload));
 	}
 
 }
