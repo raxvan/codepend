@@ -101,7 +101,7 @@ namespace cdp
 		}
 
 	public:
-		/*template <std::convertible_to<T> From>
+		template <std::convertible_to<T> From>
 		inline coroutine::resolved_dependency_colist_value<T> operator=(From&& v)
 		{
 			_lock_for_resolve();
@@ -109,7 +109,7 @@ namespace cdp
 			value = std::forward<From>(v);
 			_unlock_resolve(0);
 			return { rl, &value };
-		}*/
+		}
 	};
 
 	template <>

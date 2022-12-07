@@ -300,6 +300,7 @@ void test_dependency_value()
 
 cdp::coroutine string_setter(cdp::result<std::string>& h, cdp::result<std::string>& w)
 {
+
 	std::cout << co_yield h = "hello ";
 	co_yield w = "world\n";
 }
