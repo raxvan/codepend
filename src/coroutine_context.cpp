@@ -23,61 +23,50 @@ namespace cdp
 
 	//--------------------------------------------------------------------------------------------------------------------------------
 
-	bool coroutine::await_on_resolve_impl::await_ready()
-	{
-		if (resolve_list)
-			return false;
-		return true;
-	}
 
 	//--------------------------------------------------------------------------------------------------------------------------------
 
-	coroutine::await_on_resolve::await_on_resolve(handle_type colist, coroutine_context& coctx)
+	bool coroutine::await_suspend_with_colist::await_ready()
 	{
-		resolve_list = colist;
-		// CDP_ASSERT(coctx.frame_function.valid() == false);
-		if (resolve_list)
+		return (list.first == handle_type{});
+	}
+
+	coroutine::await_suspend_with_colist::await_suspend_with_colist(handle_type first, coroutine_context& coctx)
+	{
+		list.first = first;
+		if (list.first)
 		{
-			coctx.frame_function.func = await_on_resolve::frame_function;
+			coctx.frame_function.func = await_suspend_with_colist::frame_function;
 			coctx.frame_function.context = this;
 		}
 	}
 
-	bool coroutine::await_on_resolve::frame_function(suspend_context& sc, coroutine&, coroutine_pipe& pipe)
+	bool coroutine::await_suspend_with_colist::frame_function(suspend_context& sc, coroutine&, coroutine_pipe& pipe)
 	{
-		await_on_resolve& dr = static_cast<await_on_resolve&>(sc);
-		CDP_ASSERT(dr.resolve_list);
-		pipe.push_list_in_queue(dr.resolve_list);
+		await_suspend_with_colist& dr = static_cast<await_suspend_with_colist&>(sc);
+		CDP_ASSERT(dr.list.first);
+		pipe.execute_in_queue(dr.list);
 		return true;
 	}
 
 	//--------------------------------------------------------------------------------------------------------------------------------
 
-	bool coroutine::await_on_dependency_impl::await_ready()
+	bool coroutine::await_on_dependency::await_ready()
 	{
 		return dependency_ptr == nullptr;
 	}
-
-	//--------------------------------------------------------------------------------------------------------------------------------
-
 	void coroutine::await_on_dependency::await_resume()
 	{
-#ifdef CDP_ENABLE_ASSERT
-		if (dependency_ptr != nullptr)
-		{
-			uint32_t tmp;
-			CDP_ASSERT(dependency_ptr->resolved(tmp) == true);
-		}
-#endif
+		CDP_ASSERT(dependency_ptr == nullptr || dependency_ptr->_isresolved() == true);
 	}
-	coroutine::await_on_dependency_base::await_on_dependency_base(dependency& d, coroutine_context& coctx)
+	coroutine::await_on_dependency::await_on_dependency(dependency& d, coroutine_context& coctx)
 	{
 		if (d._isresolved() == false)
 		{
 			dependency_ptr = &d;
 
 			// CDP_ASSERT(coctx.frame_function.valid() == false);
-			coctx.frame_function.func = await_on_dependency_base::frame_function;
+			coctx.frame_function.func = await_on_dependency::frame_function;
 			coctx.frame_function.context = this;
 		}
 		else
@@ -85,9 +74,9 @@ namespace cdp
 			dependency_ptr = nullptr;
 		}
 	}
-	bool coroutine::await_on_dependency_base::frame_function(suspend_context& sc, coroutine& co, coroutine_pipe&)
+	bool coroutine::await_on_dependency::frame_function(suspend_context& sc, coroutine& co, coroutine_pipe&)
 	{
-		await_on_dependency_base& aw = static_cast<await_on_dependency_base&>(sc);
+		await_on_dependency& aw = static_cast<await_on_dependency&>(sc);
 		CDP_ASSERT(aw.dependency_ptr != nullptr);
 		uint32_t tmp = std::numeric_limits<uint32_t>::max();
 		if (aw.dependency_ptr->_lock_for_await(tmp))
@@ -100,29 +89,6 @@ namespace cdp
 
 		return true;
 	}
-	//--------------------------------------------------------------------------------------------------------------------------------
-
-	coroutine::await_on_frame::await_on_frame(frame& f, coroutine_context& coctx)
-		: frame_ptr(&f)
-	{
-
-		coctx.frame_function.func = await_on_frame::frame_function;
-		coctx.frame_function.context = this;
-	}
-	bool coroutine::await_on_frame::frame_function(suspend_context& sc, coroutine& co, coroutine_pipe&)
-	{
-		// noop
-		await_on_frame& aw = static_cast<await_on_frame&>(sc);
-		CDP_ASSERT(aw.frame_ptr != nullptr);
-		auto& f = *aw.frame_ptr;
-
-		auto cohandle = co.detach();
-		f.frame_state._lock_for_resolve();
-		f.frame_state._attach(cohandle);
-		f.frame_state._unlock_unresolved();
-		return false;
-	}
-
 	//--------------------------------------------------------------------------------------------------------------------------------
 	coroutine::await_on_dependency_value::await_on_dependency_value(dependency& d, coroutine_context& coctx)
 	{
@@ -159,6 +125,10 @@ namespace cdp
 
 		return true;
 	}
+	bool coroutine::await_on_dependency_value::await_ready()
+	{
+		return dependency_ptr == nullptr;
+	}
 
 	uint32_t coroutine::await_on_dependency_value::await_resume()
 	{
@@ -169,19 +139,58 @@ namespace cdp
 	}
 
 	//--------------------------------------------------------------------------------------------------------------------------------
-
-	coroutine::await_on_resolve coroutine::coroutine_context::yield_value(dependency& d)
+	
+	coroutine::await_on_frame::await_on_frame(frame& f, coroutine_context& coctx)
+		: frame_ptr(&f)
 	{
-		return coroutine::await_on_resolve(d.resolve(), *this);
+
+		coctx.frame_function.func = await_on_frame::frame_function;
+		coctx.frame_function.context = this;
 	}
-	coroutine::await_on_resolve coroutine::coroutine_context::yield_value(dependency* dptr)
+	bool coroutine::await_on_frame::frame_function(suspend_context& sc, coroutine& co, coroutine_pipe&)
+	{
+		await_on_frame& aw = static_cast<await_on_frame&>(sc);
+		CDP_ASSERT(aw.frame_ptr != nullptr);
+		auto& f = *aw.frame_ptr;
+
+		auto cohandle = co.detach();
+		f.add(cohandle);
+		return false;
+	}
+
+	//--------------------------------------------------------------------------------------------------------------------------------
+	coroutine::await_suspend_with_colist coroutine::coroutine_context::await_transform(coroutine_list colist)
+	{
+		return await_suspend_with_colist(colist.first, *this);
+	}
+	
+
+	coroutine::await_on_dependency coroutine::coroutine_context::await_transform(dependency& d)
+	{
+		return await_on_dependency(d, *this);
+	}
+	coroutine::await_on_dependency coroutine::coroutine_context::await_transform(dependency* dptr)
 	{
 		CDP_ASSERT(dptr != nullptr);
-		return coroutine::await_on_resolve(dptr->resolve(), *this);
+		return await_on_dependency(*dptr, *this);
 	}
-	coroutine::await_on_resolve coroutine::coroutine_context::yield_value(resolved_dependency_colist dy)
+	coroutine::await_on_frame coroutine::coroutine_context::await_transform(frame& f)
 	{
-		return coroutine::await_on_resolve(dy.resolve_list, *this);
+		return await_on_frame(f, *this);
+	}
+	coroutine::await_on_frame coroutine::coroutine_context::await_transform(frame* fptr)
+	{
+		CDP_ASSERT(fptr != nullptr);
+		return await_on_frame(*fptr, *this);
+	}
+	coroutine::await_on_dependency_value coroutine::coroutine_context::await_transform(result<uint32_t>& d)
+	{
+		return coroutine::await_on_dependency_value(d, *this);
+	}
+	coroutine::await_on_dependency_value coroutine::coroutine_context::await_transform(result<uint32_t>* dptr)
+	{
+		CDP_ASSERT(dptr != nullptr);
+		return coroutine::await_on_dependency_value(*dptr, *this);
 	}
 
 	//--------------------------------------------------------------------------------------------------------------------------------

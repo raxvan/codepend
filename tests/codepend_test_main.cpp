@@ -32,7 +32,7 @@ cdp::coroutine satisfy_dependncy(cdp::dependency& d)
 {
 	ttf::instance_counter local_guard;
 	std::cout << "resolving dependency..." << std::endl;
-	co_yield d;
+	co_await d.resolve();
 	std::cout << "dependency resolved." << std::endl;
 	co_return;
 }
@@ -77,7 +77,7 @@ void basic_coroutine_test()
 				pipe.execute_frame(std::move(co));
 			}
 
-			pipe.resolve_in_frame(dep2);
+			pipe.execute_in_frame(dep2.resolve());
 
 			TEST_ASSERT(pipe.empty() == true); // because cogen is waiting
 		}
@@ -104,7 +104,7 @@ cdp::coroutine resolving_coroutine(dependency_array& dvec, std::size_t index)
 {
 	// wait first
 	ttf::instance_counter local_guard;
-	co_yield dvec[(index * 6949) % dvec.size()];
+	co_await dvec[(index * 6949) % dvec.size()].resolve();
 	co_return;
 }
 
@@ -180,7 +180,7 @@ void test_coroutine_dependency()
 		threading::latch l { uint32_t(threads.size() + 1) };
 		threading::latch e { uint32_t(threads.size() + 1) };
 
-		auto thread_job = [&](const std::size_t index) { pipe.resolve_in_frame(thread_dependency[index]); };
+		auto thread_job = [&](const std::size_t index) { pipe.execute_in_frame(thread_dependency[index].resolve()); };
 
 		for (std::size_t i = 0; i < threads.size(); i++)
 		{
@@ -270,9 +270,9 @@ void test_cosginal()
 
 cdp::coroutine setter(cdp::result<uint32_t>& one, cdp::result<uint32_t>& two, cdp::result<uint32_t>& three)
 {
-	co_yield one = 1;
-	co_yield two = 2;
-	co_yield three = 3;
+	co_await one.resolve(1);
+	co_await two.resolve(2);
+	co_await three.resolve(3);
 }
 
 cdp::coroutine getter(cdp::result<uint32_t>& d, const uint32_t expected)
@@ -300,9 +300,9 @@ void test_dependency_value()
 
 cdp::coroutine string_setter(cdp::result<std::string>& h, cdp::result<std::string>& w)
 {
-
-	std::cout << co_yield h = "hello ";
-	co_yield w = "world\n";
+	co_await h.resolve("hello ");
+	std::cout << h.value;
+	co_await w.resolve("world\n");
 }
 cdp::coroutine writer(cdp::result<std::string>& d)
 {
@@ -378,14 +378,14 @@ void test_frames()
 	for (std::size_t i = 0; i < 10; i++)
 	{
 		thread_sleep(3);
-		pipe.execute_in_frame(main_frame);
-		pipe.execute_in_queue(exit_frame);
+		pipe.execute_in_frame(main_frame.detach_waiting_list());
+		pipe.execute_in_queue(exit_frame.detach_waiting_list());
 	}
 	pipe.wait_for_empty();
 
-	pipe.execute_in_frame(exit_frame);
+	pipe.execute_in_frame(exit_frame.detach_waiting_list());
 	keep_looping = false;
-	pipe.execute_in_frame(main_frame);
+	pipe.execute_in_frame(main_frame.detach_waiting_list());
 
 	pipe.evict();
 	for (std::size_t i = 0; i < threads.size(); i++)
@@ -414,7 +414,7 @@ void test_coroutine_generator()
 				co.handle.promise().add_sequential(acc.detach());
 				return true;
 			};
-			co_yield cdp::coroutine::frame_function(std::move(g));
+			co_await cdp::frame_function(std::move(g));
 		}
 
 		co_return;
@@ -448,7 +448,7 @@ void test_switch_speed()
 	for(std::size_t i = 0; i < count;i++)
 	{
 		auto	 start = std::chrono::high_resolution_clock::now();
-		pipe.execute_in_frame(f);
+		pipe.execute_in_frame(f.detach_waiting_list());
 		auto	 end = std::chrono::high_resolution_clock::now();
 		uint64_t ns = std::chrono::duration<uint64_t, std::nano>(end - start).count();
 		avgns += ns;
@@ -467,5 +467,6 @@ void test_main()
 	TEST_FUNCTION(test_frames);
 	TEST_FUNCTION(test_coroutine_generator);
 	TEST_FUNCTION(test_switch_speed);
+
 }
 TEST_MAIN(test_main)

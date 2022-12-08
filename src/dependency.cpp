@@ -19,18 +19,8 @@ namespace cdp
 
 	dependency::~dependency()
 	{
-#ifdef CDP_TESTING
-		uint32_t t;
-		if (_lock_for_await(t))
-		{
-			CDP_ASSERT(waiting_list == coroutine::handle_type {});
-			_unlock_unresolved();
-		}
-		else
-		{
-			CDP_ASSERT(t != _unresolved_value() && t != _locked_value());
-		}
-#endif
+		CDP_ASSERT(resolve_state.exchange(_locked_value()) != _locked_value());
+		CDP_ASSERT(waiting_list == coroutine::handle_type{});
 	}
 
 	//--------------------------------------------------------------------------------------------------------------------------------
@@ -43,19 +33,19 @@ namespace cdp
 		_unlock_unresolved();
 	}
 
-	coroutine::handle_type dependency::resolve(const uint32_t payload)
+	coroutine::coroutine_list dependency::resolve(const uint32_t payload)
 	{
 		_lock_for_resolve();
 		auto result = _detach();
 		_unlock_resolve(payload);
-		return result;
+		return coroutine::coroutine_list(result);
 	}
-	coroutine::handle_type dependency::detach()
+	coroutine::coroutine_list dependency::detach()
 	{
 		_lock_for_resolve();
 		auto result = _detach();
 		_unlock_unresolved();
-		return result;
+		return coroutine::coroutine_list(result);
 	}
 
 	//--------------------------------------------------------------------------------------------------------------------------------

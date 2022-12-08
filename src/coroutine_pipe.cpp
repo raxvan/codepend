@@ -9,23 +9,24 @@ namespace cdp
 	{
 	}
 
-	void coroutine_pipe::execute_list_in_frame(coroutine::handle_type h)
+	void coroutine_pipe::execute_in_frame(coroutine::coroutine_list h)
 	{
-		while (h)
+		auto itr = h.first;
+		while (itr)
 		{
-			coroutine::handle_type hnext = h.promise().detach_parallel();
-			this->execute_frame(coroutine(h));
-			h = hnext;
+			coroutine::handle_type hnext = itr.promise().detach_parallel();
+			this->execute_frame(coroutine(itr));
+			itr = hnext;
 		}
 	}
-	void coroutine_pipe::push_list_in_queue(coroutine::handle_type h)
+	void coroutine_pipe::execute_in_queue(coroutine::coroutine_list h)
 	{
-		while (h)
+		auto itr = h.first;
+		while (itr)
 		{
-			coroutine::handle_type hnext = h.promise().detach_parallel();
-			coroutine			   co(h);
-			this->push_async(std::move(co));
-			h = hnext;
+			coroutine::handle_type hnext = itr.promise().detach_parallel();
+			this->push_async(coroutine(itr));
+			itr = hnext;
 		}
 	}
 
@@ -55,23 +56,6 @@ namespace cdp
 			break;
 		}
 		CDP_ASSERT(!co.handle); // it must be destroyed or attached to something
-	}
-
-	void coroutine_pipe::execute_in_frame(frame& f)
-	{
-		execute_list_in_frame(f.frame_state.detach());
-	}
-	void coroutine_pipe::execute_in_queue(frame& f)
-	{
-		push_list_in_queue(f.frame_state.detach());
-	}
-	void coroutine_pipe::resolve_in_frame(dependency& d, const uint32_t payload)
-	{
-		execute_list_in_frame(d.resolve(payload));
-	}
-	void coroutine_pipe::resolve_in_queue(dependency& d, const uint32_t payload)
-	{
-		push_list_in_queue(d.resolve(payload));
 	}
 
 }
