@@ -426,6 +426,36 @@ void test_coroutine_generator()
 	TEST_ASSERT(counter == 10);
 }
 
+
+void test_switch_speed()
+{
+	cdp::frame f;
+	auto loop = [](bool& l, cdp::frame& f) -> cdp::coroutine
+	{
+		while (l)
+		{
+			co_await f;
+		}
+	};
+
+	bool keep_looping = true;
+	auto co = loop(keep_looping, f);
+	
+	copipe pipe;
+
+	uint64_t avgns = 0;
+	std::size_t count = 100;
+	for(std::size_t i = 0; i < count;i++)
+	{
+		auto	 start = std::chrono::high_resolution_clock::now();
+		pipe.execute_in_frame(f);
+		auto	 end = std::chrono::high_resolution_clock::now();
+		uint64_t ns = std::chrono::duration<uint64_t, std::nano>(end - start).count();
+		avgns += ns;
+	}
+	std::cout << "execute_in_frame avg " << avgns / count << " ns" << std::endl;
+}
+
 void test_main()
 {
 	TEST_FUNCTION(test_coroutine_dependency);
@@ -436,5 +466,6 @@ void test_main()
 	TEST_FUNCTION(test_string_value);
 	TEST_FUNCTION(test_frames);
 	TEST_FUNCTION(test_coroutine_generator);
+	TEST_FUNCTION(test_switch_speed);
 }
 TEST_MAIN(test_main)
