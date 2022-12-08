@@ -196,11 +196,10 @@ namespace cdp
 			await_on_dependency await_transform(dependency* dptr);
 			await_on_frame await_transform(frame& f);
 			await_on_frame await_transform(frame* fptr);
-			
-		public:
 			await_on_dependency_value await_transform(result<uint32_t>& d);
 			await_on_dependency_value await_transform(result<uint32_t>* dptr);
 
+		public:
 			template <class T>
 			inline await_on_result<T> await_transform(result<T>& dptr);
 			template <class T>
@@ -212,12 +211,6 @@ namespace cdp
 			{
 				return await_suspend_frame_function<F>(std::move(ft.func), *this);	
 			}
-
-		public:
-			
-
-			//template <class T>
-			//inline void await_transform(std::pair<coroutine_list,T> colist);
 
 		public:
 			coroutine_context() = default;
