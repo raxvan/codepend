@@ -35,18 +35,19 @@ namespace cdp
 
 	void cosignal::acquire()
 	{
-		m_counter++;
+		int r = m_counter++;
+		CDP_ASSERT(r > 0);
 	}
 
 	void cosignal::release_and_continue()
 	{
 		int r = --m_counter;
 		CDP_ASSERT(r >= 0);
+
 		if (r == 0)
 		{
 			std::unique_lock<std::mutex> _(m_mutex);
-			CDP_ASSERT(m_counter == 0);
-			if (m_waiting)
+			if (m_counter == 0 && m_waiting)
 				m_wait.notify_one();
 		}
 	}

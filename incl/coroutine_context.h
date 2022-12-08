@@ -65,6 +65,24 @@ namespace cdp
 			}
 			static bool frame_function(suspend_context&, coroutine&, coroutine_pipe&);
 		};
+		struct await_move_to_queue : public suspend_context
+		{
+			coroutine_pipe& pipe;
+			await_move_to_queue(coroutine_pipe& p, coroutine_context& coctx);
+			static bool frame_function(suspend_context&, coroutine&, coroutine_pipe&);
+
+			constexpr bool await_ready()
+			{
+				return false;
+			}
+			constexpr void await_resume()
+			{
+			}
+			constexpr void await_suspend(handle_type)
+			{
+			}
+		};
+		
 	public:
 		struct await_on_dependency : public suspend_context
 		{
@@ -198,6 +216,8 @@ namespace cdp
 			await_on_frame await_transform(frame* fptr);
 			await_on_dependency_value await_transform(result<uint32_t>& d);
 			await_on_dependency_value await_transform(result<uint32_t>* dptr);
+
+			await_move_to_queue await_transform(coroutine_pipe& p);
 
 		public:
 			template <class T>

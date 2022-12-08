@@ -24,6 +24,19 @@ namespace cdp
 	//--------------------------------------------------------------------------------------------------------------------------------
 
 
+	coroutine::await_move_to_queue::await_move_to_queue(coroutine_pipe& p, coroutine_context& coctx)
+		:pipe(p)
+	{
+		coctx.frame_function.func = await_move_to_queue::frame_function;
+		coctx.frame_function.context = this;
+	}
+	bool coroutine::await_move_to_queue::frame_function(suspend_context& sc, coroutine& co, coroutine_pipe&)
+	{
+		await_move_to_queue& dr = static_cast<await_move_to_queue&>(sc);
+		dr.pipe.push_async(std::move(co));	
+		return false;
+	}
+
 	//--------------------------------------------------------------------------------------------------------------------------------
 
 	bool coroutine::await_suspend_with_colist::await_ready()
@@ -164,6 +177,10 @@ namespace cdp
 		return await_suspend_with_colist(colist.first, *this);
 	}
 	
+	coroutine::await_move_to_queue coroutine::coroutine_context::await_transform(coroutine_pipe& p)
+	{
+		return coroutine::await_move_to_queue(p, *this);
+	}
 
 	coroutine::await_on_dependency coroutine::coroutine_context::await_transform(dependency& d)
 	{
