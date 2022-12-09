@@ -31,4 +31,28 @@ namespace cdp
 		std::mutex				m_mutex;
 		std::condition_variable m_wait;
 	};
+
+
+	struct signal_lock
+	{
+	public:
+		inline signal_lock(cosignal& s)
+			:signal(&s)
+		{
+			s.acquire();
+		}
+		inline signal_lock(cosignal* s)
+			:signal(s)
+		{
+			if(s != nullptr)
+				s->acquire();
+		}
+		inline ~signal_lock()
+		{
+			if(signal != nullptr)
+				signal->release_and_continue();
+		}
+	protected:
+		cosignal* signal;
+	};
 }
