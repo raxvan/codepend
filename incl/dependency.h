@@ -81,7 +81,7 @@ namespace cdp
 	struct result : public dependency
 	{
 	public:
-		T value;
+		T value = T{};
 
 	public:
 		result() = default;

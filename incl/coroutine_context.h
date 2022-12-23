@@ -273,8 +273,8 @@ namespace cdp
 
 	public:
 		coroutine& operator=(const coroutine& other);
-		coroutine& operator=(coroutine&& other);
-		coroutine(coroutine&& other);
+		coroutine& operator=(coroutine&& other) noexcept;
+		coroutine(coroutine&& other) noexcept;
 		void swap(coroutine& other);
 		void reset();
 

@@ -260,14 +260,14 @@ namespace cdp
 		swap(tmp);
 		return (*this);
 	}
-	coroutine& coroutine::operator=(coroutine&& other)
+	coroutine& coroutine::operator=(coroutine&& other) noexcept
 	{
 		coroutine tmp;
 		swap(tmp);
 		swap(other);
 		return (*this);
 	}
-	coroutine::coroutine(coroutine&& other)
+	coroutine::coroutine(coroutine&& other) noexcept
 	{
 		swap(other);
 	}
