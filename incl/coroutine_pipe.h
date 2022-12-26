@@ -5,7 +5,7 @@
 namespace cdp
 {
 
-	struct coroutine_pipe
+	struct coroutine_pipe : public suspend_context
 	{
 	public:
 		void execute_frame(coroutine&& co); // return true if coroutine has finished
@@ -18,11 +18,25 @@ namespace cdp
 
 	public:
 		~coroutine_pipe();
+
+	public://co_await:
+		static bool frame_function(suspend_context&, coroutine&, coroutine_pipe&);
+		inline bool await_ready()
+		{
+			return false;
+		}
+		inline void await_resume()
+		{
+		}
+		inline void await_suspend(coroutine::handle_type h)
+		{
+			h.promise().frame_function << this;
+		}
 	};
 
 	//--------------------------------------------------------------------------------------------------------------------------------
 
-	template <class F>
+	/*template <class F>
 	inline coroutine::await_suspend_frame_function<F>::await_suspend_frame_function(F&& _func, coroutine_context& coctx)
 		: func(std::move(_func))
 	{
@@ -33,6 +47,6 @@ namespace cdp
 
 		coctx.frame_function.func = frame_function;
 		coctx.frame_function.context = this;
-	}
+	}*/
 
 }

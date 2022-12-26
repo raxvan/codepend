@@ -8,7 +8,7 @@ namespace cdp
 
 	//--------------------------------------------------------------------------------------------------------------------------------
 
-	struct dependency
+	struct dependency : public suspend_context
 	{
 	public:
 		~dependency();
@@ -34,10 +34,21 @@ namespace cdp
 
 		void reset(); // must be resolved, changes state to unresolved
 
-	protected:
-		friend struct coroutine_pipe;
-		friend struct coroutine;
-
+	public://co_await:
+		static bool frame_function(suspend_context&, coroutine&, coroutine_pipe&);
+		inline bool await_ready()
+		{
+			return this->_isresolved();
+		}
+		inline void await_resume()
+		{
+			CDP_ASSERT(this->_isresolved() == true);
+		}
+		inline void await_suspend(coroutine::handle_type h)
+		{
+			h.promise().frame_function << this;
+		}
+	public:
 		void _lock_for_resolve();
 		bool _lock_for_await(uint32_t& out);
 
@@ -71,6 +82,18 @@ namespace cdp
 		{
 			return frame_state.detach();
 		}
+	public://co_await:
+		inline bool await_ready()
+		{
+			return false;
+		}
+		inline void await_resume()
+		{
+		}
+		inline void await_suspend(coroutine::handle_type h)
+		{
+			h.promise().frame_function << &frame_state;
+		}
 	protected:
 		dependency frame_state;
 	};
@@ -102,6 +125,21 @@ namespace cdp
 			return rl;
 		}
 
+	public://co_await:
+		inline bool await_ready()
+		{
+			return this->_isresolved();
+		}
+		inline const T& await_resume()
+		{
+			CDP_ASSERT(this->_isresolved() == true);
+			return value;
+		}
+		inline void await_suspend(coroutine::handle_type h)
+		{
+			h.promise().frame_function << static_cast<dependency*>(this);
+		}
+
 	};
 
 	template <>
@@ -115,12 +153,27 @@ namespace cdp
 			_unlock_resolve(v);
 			return rl;
 		}
+
+	public://co_await:
+		//TODO: operator co_await to minimize locking of dependency
+		inline bool await_ready()
+		{
+			return this->_isresolved();
+		}
+		inline uint32_t await_resume()
+		{
+			return get();
+		}
+		inline void await_suspend(coroutine::handle_type h)
+		{
+			h.promise().frame_function << static_cast<dependency*>(this);
+		}
 	};
 
 	//--------------------------------------------------------------------------------------------------------------------------------
 	//--------------------------------------------------------------------------------------------------------------------------------
 
-	template <class T>
+	/*template <class T>
 	inline coroutine::await_on_result<T> coroutine::coroutine_context::await_transform(result<T>& d)
 	{
 		return coroutine::await_on_result<T>(d, *this, d.value);
@@ -138,4 +191,6 @@ namespace cdp
 		CDP_ASSERT(dependency_ptr == nullptr || dependency_ptr->_isresolved() == true);
 		return valueref;
 	}
+	*/
 }
+

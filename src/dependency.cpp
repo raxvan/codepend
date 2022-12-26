@@ -204,4 +204,21 @@ namespace cdp
 		CDP_ASSERT(pr == _locked_value());
 	}
 
+	//--------------------------------------------------------------------------------------------------------------------------------
+
+	bool dependency::frame_function(suspend_context& sc, coroutine& co, coroutine_pipe&)
+	{
+		dependency& d = static_cast<dependency&>(sc);
+		uint32_t tmp = std::numeric_limits<uint32_t>::max();
+		if (d._lock_for_await(tmp))
+		{
+			auto cohandle = co.detach();
+			d._attach(cohandle);
+			d._unlock_unresolved();
+			return false;
+		}
+		return true;
+	}
+
+	
 }

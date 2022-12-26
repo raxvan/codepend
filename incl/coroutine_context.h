@@ -27,6 +27,13 @@ namespace cdp
 		bool run(coroutine& co, coroutine_pipe& pipe);
 		bool valid() const;
 		void reset();
+
+		template <class T>
+		void operator << (T* obj)
+		{
+			func = T::frame_function;
+			context = obj;
+		};
 	};
 
 	struct coroutine
@@ -36,8 +43,9 @@ namespace cdp
 		using handle_type = std::coroutine_handle<coroutine_context>;
 
 	public:
-		struct coroutine_list
+		struct coroutine_list : public suspend_context
 		{
+		public:
 			handle_type first = handle_type{};
 
 			inline coroutine_list(handle_type h)
@@ -48,147 +56,48 @@ namespace cdp
 			coroutine_list() = default;
 			coroutine_list(const coroutine_list&) = default;
 			coroutine_list& operator =(const coroutine_list&) = default;
-		};
-	public:
-		struct await_suspend_with_colist : public suspend_context
-		{
-			coroutine_list list;
-			await_suspend_with_colist(handle_type colist, coroutine_context& coctx);
 
-			bool await_ready();
-
-			constexpr void await_resume()
-			{
-			}
-			constexpr void await_suspend(handle_type)
-			{
-			}
+		public://co_await
 			static bool frame_function(suspend_context&, coroutine&, coroutine_pipe&);
-		};
-		struct await_move_to_queue : public suspend_context
-		{
-			coroutine_pipe& pipe;
-			await_move_to_queue(coroutine_pipe& p, coroutine_context& coctx);
-			static bool frame_function(suspend_context&, coroutine&, coroutine_pipe&);
-
-			constexpr bool await_ready()
-			{
-				return false;
-			}
-			constexpr void await_resume()
-			{
-			}
-			constexpr void await_suspend(handle_type)
-			{
-			}
-		};
-		
-	public:
-		struct await_on_dependency : public suspend_context
-		{
-			static bool frame_function(suspend_context&, coroutine&, coroutine_pipe&);
-
-			dependency* dependency_ptr;
-
-			await_on_dependency(dependency& d, coroutine_context& coctx);
-
-			bool await_ready();
-			void await_resume();
-
-			inline constexpr void await_suspend(handle_type)
-			{
-			}
-		};
-		struct await_on_dependency_value : public suspend_context
-		{
-			static bool frame_function(suspend_context&, coroutine&, coroutine_pipe&);
-			dependency* dependency_ptr;
-			uint32_t result;
-
-			await_on_dependency_value(dependency& d, coroutine_context& coctx);
-
-			bool await_ready();
-			uint32_t await_resume();
-
-			inline constexpr void await_suspend(handle_type)
-			{
-			}
-		};
-
-		struct await_on_frame : public suspend_context
-		{
-			static bool frame_function(suspend_context&, coroutine&, coroutine_pipe&);
-			frame* frame_ptr;
-
-			await_on_frame(frame& f, coroutine_context& coctx);
-
-			inline constexpr bool await_ready()
-			{
-				return false;
-			}
-			inline constexpr void await_suspend(handle_type)
-			{
-			}
-			inline constexpr void await_resume()
-			{
-			}
-		};
-
-
-		/*struct await_on_result_impl 
-		{
-			await_on_result_impl(dependency& d, coroutine_context& coctx);
-			dependency* dependency_ptr;
-		}*/
-		template <class T>
-		struct await_on_result : private await_on_dependency
-		{
-			const T& valueref;
-
 			inline bool await_ready()
 			{
-				return await_on_dependency::await_ready();
+				return false;
 			}
-			constexpr void await_suspend(handle_type)
+			inline void await_resume()
 			{
 			}
-			inline const T& await_resume() const;
-			
-			inline await_on_result(dependency& d, coroutine_context& coctx, const T& _value)
-				:await_on_dependency(d, coctx)
-				,valueref(_value)
+			inline void await_suspend(coroutine::handle_type h)
 			{
+				h.promise().frame_function << this;
 			}
 		};
+	public:
 
-		
 		template <class F>
-		struct await_suspend_frame_function : public suspend_context
+		struct frame_function_await : public suspend_context
 		{
 			F func;
-			inline await_suspend_frame_function(F&& _func, coroutine_context& coctx);
+			inline frame_function_await(F&& _func)
+				:func(std::move(_func))
+			{}
 
-			inline constexpr bool await_ready()
+		public://co_await:
+			static bool frame_function(suspend_context& sc, coroutine& co, coroutine_pipe& pipe)
+			{
+				frame_function_await<F>& d = static_cast<frame_function_await<F>&>(sc);
+				return d.func(co, pipe);
+			}
+			inline bool await_ready()
 			{
 				return false;
 			}
-			inline constexpr void await_suspend(handle_type)
+			inline void await_resume()
 			{
 			}
-			inline constexpr void await_resume()
+			inline void await_suspend(coroutine::handle_type h)
 			{
+				h.promise().frame_function << this;
 			}
-
-			static bool frame_function(suspend_context&, coroutine&, coroutine_pipe&);
-		};
-
-		template <class F>
-		struct frame_function_transport
-		{
-			F func;
-			inline frame_function_transport(F&& _func)
-				:func(std::move(_func))
-			{}
 		};
 
 	public:
@@ -207,30 +116,6 @@ namespace cdp
 			handle_type	 next_sequential;
 
 			cosignal* destroy_signal = nullptr;
-
-		public:
-			await_suspend_with_colist await_transform(coroutine_list colist);
-			await_on_dependency await_transform(dependency& d);
-			await_on_dependency await_transform(dependency* dptr);
-			await_on_frame await_transform(frame& f);
-			await_on_frame await_transform(frame* fptr);
-			await_on_dependency_value await_transform(result<uint32_t>& d);
-			await_on_dependency_value await_transform(result<uint32_t>* dptr);
-
-			await_move_to_queue await_transform(coroutine_pipe& p);
-
-		public:
-			template <class T>
-			inline await_on_result<T> await_transform(result<T>& dptr);
-			template <class T>
-			inline await_on_result<T> await_transform(result<T>* dptr);
-			
-
-			template <class F>
-			inline await_suspend_frame_function<F> await_transform(frame_function_transport<F> ft)
-			{
-				return await_suspend_frame_function<F>(std::move(ft.func), *this);	
-			}
 
 		public:
 			coroutine_context() = default;
@@ -299,9 +184,9 @@ namespace cdp
 
 	template <class F>
 	// bool F(coroutine& co, coroutine_pipe& pipe)
-	inline coroutine::frame_function_transport<F> frame_function(F&& _func)
+	inline coroutine::frame_function_await<F> frame_function(F&& _func)
 	{
-		return coroutine::frame_function_transport<F>(std::move(_func));
+		return coroutine::frame_function_await<F>(std::move(_func));
 	}
 
 }

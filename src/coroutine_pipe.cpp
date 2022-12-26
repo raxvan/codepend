@@ -58,4 +58,12 @@ namespace cdp
 		CDP_ASSERT(!co.handle); // it must be destroyed or attached to something
 	}
 
+
+	bool coroutine_pipe::frame_function(suspend_context& sc, coroutine& co, coroutine_pipe&)
+	{
+		coroutine_pipe& d = static_cast<coroutine_pipe&>(sc);
+		d.push_async(std::move(co));
+		return false;
+	}
+
 }
