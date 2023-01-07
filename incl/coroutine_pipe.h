@@ -8,7 +8,7 @@ namespace cdp
 	struct coroutine_pipe : public suspend_context
 	{
 	public:
-		void execute_frame(coroutine&& co); // return true if coroutine has finished
+		void execute_frame(coroutine&& co);
 
 		void execute_in_frame(coroutine::coroutine_list colist);
 		void execute_in_queue(coroutine::coroutine_list colist);

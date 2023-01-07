@@ -73,6 +73,16 @@ namespace cdp
 		~frame() = default;
 		frame() = default;
 
+		void lock();
+		void unlock();
+
+	public: //must be locked:
+
+		void add(coroutine&& co);
+		coroutine::coroutine_list detach_waiting_list();
+
+	public:
+		/*
 		inline void add(coroutine&& co)
 		{
 			frame_state.add(std::move(co));
@@ -82,6 +92,7 @@ namespace cdp
 		{
 			return frame_state.detach();
 		}
+		*/
 	public://co_await:
 		inline bool await_ready()
 		{

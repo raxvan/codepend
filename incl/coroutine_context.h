@@ -57,6 +57,11 @@ namespace cdp
 			coroutine_list(const coroutine_list&) = default;
 			coroutine_list& operator =(const coroutine_list&) = default;
 
+		public:
+			inline bool empty() const
+			{
+				return first == handle_type{};
+			}
 		public://co_await
 			static bool frame_function(suspend_context&, coroutine&, coroutine_pipe&);
 			inline bool await_ready()

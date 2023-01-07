@@ -133,6 +133,7 @@ namespace cdp
 
 	void dependency::_attach(coroutine::handle_type h)
 	{
+		CDP_ASSERT(resolve_state.load() == _locked_value());
 		CDP_ASSERT(h.promise().next_parallel == coroutine::handle_type {});
 		h.promise().next_parallel = this->waiting_list;
 		this->waiting_list = h;
@@ -140,6 +141,7 @@ namespace cdp
 
 	coroutine::handle_type dependency::_detach()
 	{
+		CDP_ASSERT(resolve_state.load() == _locked_value());
 		auto result = this->waiting_list;
 		this->waiting_list = coroutine::handle_type {};
 		return result;
@@ -218,6 +220,27 @@ namespace cdp
 			return false;
 		}
 		return true;
+	}
+
+	//--------------------------------------------------------------------------------------------------------------------------------
+
+	void frame::lock()
+	{
+		frame_state._lock_for_resolve();
+	}
+	void frame::unlock()
+	{
+		frame_state._unlock_unresolved();
+	}
+
+	void frame::add(coroutine&& co)
+	{
+		frame_state._attach(co.detach());
+	}
+	coroutine::coroutine_list frame::detach_waiting_list()
+	{
+		auto result = frame_state._detach();
+		return coroutine::coroutine_list(result);
 	}
 
 	
