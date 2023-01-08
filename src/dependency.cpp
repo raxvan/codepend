@@ -243,5 +243,31 @@ namespace cdp
 		return coroutine::coroutine_list(result);
 	}
 
+
+	//--------------------------------------------------------------------------------------------------------------------------------
+
+
+	void barrier_frame::acquire()
+	{
+		m_signal.acquire();	
+	}
+
+	coroutine::coroutine_list barrier_frame::wait()
+	{
+		m_signal.wait();
+		std::lock_guard<cdp::frame> _(m_frame);
+		return m_frame.detach_waiting_list();
+	}
+
+	bool barrier_frame::frame_function(suspend_context& sc, coroutine& co, coroutine_pipe&)
+	{
+		barrier_frame& bf = static_cast<barrier_frame&>(sc);
+
+		std::lock_guard<cdp::frame> _(bf.m_frame);
+		bf.m_frame.add(std::move(co));
+		bf.m_signal.release_and_continue();
+		return false;
+	}
+
 	
 }

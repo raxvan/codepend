@@ -81,18 +81,6 @@ namespace cdp
 		void add(coroutine&& co);
 		coroutine::coroutine_list detach_waiting_list();
 
-	public:
-		/*
-		inline void add(coroutine&& co)
-		{
-			frame_state.add(std::move(co));
-		}
-
-		inline coroutine::coroutine_list detach_waiting_list()
-		{
-			return frame_state.detach();
-		}
-		*/
 	public://co_await:
 		inline bool await_ready()
 		{
@@ -107,6 +95,34 @@ namespace cdp
 		}
 	protected:
 		dependency frame_state;
+	};
+
+	//--------------------------------------------------------------------------------------------------------------------------------
+
+	struct barrier_frame : public suspend_context
+	{
+	public:
+		void acquire();
+
+		coroutine::coroutine_list wait();
+
+	public:
+		static bool frame_function(suspend_context&, coroutine&, coroutine_pipe&);
+		inline bool await_ready()
+		{
+			return false;
+		}
+		inline void await_resume()
+		{
+		}
+		inline void await_suspend(coroutine::handle_type h)
+		{
+			h.promise().frame_function << this;
+		}
+
+	protected:
+		cosignal		m_signal;
+		frame 			m_frame;
 	};
 
 	//--------------------------------------------------------------------------------------------------------------------------------
