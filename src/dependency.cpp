@@ -251,6 +251,10 @@ namespace cdp
 	{
 		m_signal.acquire();	
 	}
+	void barrier_frame::release_and_continue()
+	{
+		m_signal.release_and_continue();
+	}
 
 	coroutine::coroutine_list barrier_frame::wait()
 	{

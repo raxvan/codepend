@@ -103,6 +103,7 @@ namespace cdp
 	{
 	public:
 		void acquire();
+		void release_and_continue();
 
 		coroutine::coroutine_list wait();
 
